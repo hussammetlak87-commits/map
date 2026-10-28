@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>الخريطة التفاعلية لشبه الجزيرة العربية</title>
+<style>
+:root{
+  --sea:#a9d3ec; --sea-deep:#7fb8dc; --sea-hover:#4d9ad0;
+  --ink:#1d2b3a; --ink-soft:#4a5a6b; --navy:#0b3b66;
+  --gold:#c9a227; --gold-soft:#f4e3a1; --green:#2e7d32;
+  --paper:#fbf8ef; --line:#d9cfae; --panel:#ffffff;
+  --font:'Tajawal','Segoe UI','Noto Naskh Arabic','Noto Sans Arabic','Tahoma','Arial',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--font);background:var(--paper);color:var(--ink);line-height:1.6;-webkit-text-size-adjust:100%}
+button,input{font-family:inherit;font-size:inherit}
+header.top{background:linear-gradient(135deg,#0b3b66,#14507f);color:#fff;padding:14px 22px;border-bottom:4px solid var(--gold)}
+header.top h1{margin:0;font-size:1.55rem;font-weight:800}
+header.top p{margin:4px 0 0;font-size:.95rem;opacity:.93}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 18px;background:#fff;border-bottom:1px solid var(--line)}
+.search{position:relative;flex:1 1 260px;max-width:380px}
+.search input{width:100%;padding:8px 14px;border:1.5px solid #b9c7d4;border-radius:22px;background:#f7fafc;outline:none}
+.search input:focus{border-color:var(--navy);background:#fff}
+.suggest{position:absolute;top:calc(100% + 4px);right:0;left:0;background:#fff;border:1px solid #b9c7d4;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-height:300px;overflow:auto;z-index:60;display:none}
+.suggest.open{display:block}
+.suggest button{display:flex;width:100%;justify-content:space-between;gap:10px;align-items:center;text-align:right;background:none;border:0;padding:8px 14px;cursor:pointer;border-bottom:1px solid #eef2f6}
+.suggest button:hover,.suggest button.active{background:#eaf3fb}
+.suggest small{color:var(--ink-soft)}
+.toggles{display:flex;flex-wrap:wrap;gap:6px}
+.toggles label{display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid #d3dce5;border-radius:20px;padding:5px 12px;cursor:pointer;user-select:none;font-size:.9rem}
+.toggles input{accent-color:var(--navy)}
+.btn{background:var(--navy);color:#fff;border:0;border-radius:20px;padding:7px 16px;cursor:pointer;font-weight:700;font-size:.9rem}
+.btn:hover{background:#14507f}
+.btn.alt{background:#fff;color:var(--navy);border:1.5px solid var(--navy)}
+.btn.alt:hover{background:#eaf3fb}
+main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;padding:14px 18px}
+.map-wrap{position:relative;height:calc(100vh - 205px);min-height:500px;border-radius:14px;overflow:hidden;border:3px solid #fff;outline:2px solid var(--gold);background:var(--sea);touch-action:none;box-shadow:0 4px 18px rgba(11,59,102,.25)}
+#map{width:100%;height:100%;display:block;cursor:grab;direction:ltr;user-select:none;-webkit-user-select:none}
+#map.dragging{cursor:grabbing}
+.zoomctl{position:absolute;top:12px;left:12px;display:flex;flex-direction:column;gap:6px;z-index:15}
+.zoomctl button{width:38px;height:38px;border-radius:10px;border:1.5px solid #9db2c4;background:rgba(255,255,255,.95);cursor:pointer;font-size:1.3rem;font-weight:700;color:var(--navy);display:flex;align-items:center;justify-content:center;line-height:1}
+.zoomctl button:hover{background:#eaf3fb}
+.compass{position:absolute;top:12px;right:12px;z-index:12;pointer-events:none;background:rgba(255,255,255,.85);border:1.5px solid #9db2c4;border-radius:10px;padding:4px 10px;font-weight:700;color:var(--navy);font-size:.85rem}
+#tip{position:absolute;z-index:30;pointer-events:none;background:rgba(255,255,255,.98);border:1.5px solid var(--gold);border-radius:10px;padding:6px 10px;box-shadow:0 4px 14px rgba(0,0,0,.2);display:none;align-items:center;gap:9px;font-size:.9rem;white-space:nowrap}
+#tip .tf{width:36px;height:24px;border:1px solid #c5c5c5;border-radius:3px;overflow:hidden;flex:none}
+#tip .tf svg{display:block;width:100%;height:100%}
+#tip b{display:block;color:var(--navy)}
+#tip span{color:var(--ink-soft);font-size:.82rem}
+/* student card: fixed bottom-right inside the map frame */
+.student-card{position:absolute;bottom:14px;right:14px;z-index:40;max-width:calc(100% - 28px);padding:9px 16px;text-align:right;direction:rtl;background:rgba(255,255,255,.9);border:2px solid var(--gold);border-radius:12px;box-shadow:0 0 0 3px rgba(255,255,255,.7),0 4px 14px rgba(11,59,102,.28);font-family:var(--font);color:var(--navy);line-height:1.55;pointer-events:none}
+.student-card .sc-line{display:block;font-size:.98rem;font-weight:700;white-space:nowrap}
+.student-card .sc-line+.sc-line{font-size:.92rem;font-weight:600;color:#33516e}
+/* svg styling */
+.land-n{fill:#dedbd0;stroke:#b9b4a2;stroke-width:.8;vector-effect:non-scaling-stroke}
+.land-c{stroke:#8a7a55;stroke-width:1;vector-effect:non-scaling-stroke;cursor:pointer;transition:fill .25s}
+.water{fill:#a9d3ec;stroke:none;cursor:pointer;transition:fill .25s}
+.water:hover,.water.hover{fill:#5aa3d6}
+.water.selected{fill:#3f8fcb}
+.ov{fill:none;stroke:none;pointer-events:none;opacity:0;transition:opacity .25s,stroke-width .25s}
+.ov.hover{opacity:1;fill:rgba(214,164,26,.55);stroke:#b8860b;stroke-width:3.2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.ov.selected{opacity:1;fill:rgba(46,125,50,.42);stroke:#1b5e20;stroke-width:3;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.ov.selected.hover{fill:rgba(46,125,50,.52);stroke-width:3.6}
+.mk-ring{fill:rgba(255,255,255,.55);stroke:#0b3b66;stroke-width:2;cursor:pointer;transition:fill .2s}
+.mk-ring:hover,.mk-ring.hover{fill:rgba(77,154,208,.85)}
+.mk-ring.selected{fill:rgba(63,143,203,.95);stroke:#082a4a}
+.mk-halo{fill:rgba(63,143,203,.35);stroke:#0b3b66;stroke-width:1.5;stroke-dasharray:4 3;opacity:0;pointer-events:none;transition:opacity .25s}
+.mk-ring:hover~.mk-halo,.mk-ring.hover~.mk-halo,.mk-ring.selected~.mk-halo{opacity:1}
+text{font-family:var(--font);direction:ltr;unicode-bidi:plaintext;pointer-events:none}
+.lbl-c{fill:#3b3a2e;font-weight:800;font-size:15px;paint-order:stroke;stroke:rgba(255,255,255,.82);stroke-width:3.5px;stroke-linejoin:round}
+.lbl-c.sm{font-size:12.5px}
+.lbl-cap{fill:#222;font-weight:700;font-size:12px;paint-order:stroke;stroke:rgba(255,255,255,.85);stroke-width:3px;stroke-linejoin:round}
+.lbl-w{fill:#0a2f57;font-weight:800;font-size:13.5px;font-style:italic;letter-spacing:.5px;paint-order:stroke;stroke:rgba(214,236,250,.8);stroke-width:3px;stroke-linejoin:round}
+.lbl-w.big{font-size:17px;letter-spacing:2px}
+.lbl-n{fill:#8d897a;font-size:12px;font-weight:600;paint-order:stroke;stroke:rgba(255,255,255,.6);stroke-width:2.5px}
+.cap-star{fill:#b8301f;stroke:#fff;stroke-width:1.2}
+.leader{stroke:#4d4a3d;stroke-width:1;fill:none}
+#gL,#gL *{pointer-events:none}
+.leader.w{stroke:#0a2f57}
+.lflag{opacity:0;transition:opacity .25s}
+.lflag.on{opacity:1}
+.hide-c .g-c,.hide-cap .g-cap,.hide-w .g-w{display:none}
+/* panel */
+aside#panel{background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:16px 18px;overflow:auto;height:calc(100vh - 205px);min-height:500px}
+.p-head{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.p-flag{width:84px;height:56px;border:1px solid #c9c9c9;border-radius:6px;overflow:hidden;flex:none;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.p-flag svg{display:block;width:100%;height:100%}
+.p-head h2{margin:0;font-size:1.25rem;color:var(--navy);line-height:1.35}
+.p-head .sub{color:var(--ink-soft);font-size:.9rem}
+.sec{margin-top:12px}
+.sec h3{margin:0 0 6px;font-size:.95rem;color:#fff;background:var(--navy);display:inline-block;padding:1px 12px;border-radius:12px}
+.kv{display:grid;grid-template-columns:118px 1fr;gap:5px 10px;font-size:.93rem}
+.kv dt{color:var(--ink-soft);font-weight:700}
+.kv dd{margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{background:#eef3f8;border:1px solid #d0dbe6;border-radius:14px;padding:1px 10px;font-size:.88rem}
+.note{font-size:.82rem;color:var(--ink-soft);background:#fff8e1;border:1px solid #f0dfa0;border-radius:8px;padding:6px 10px;margin-top:8px}
+.p-actions{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.how li{margin:4px 0}
+.legend{display:flex;flex-direction:column;gap:6px;margin-top:8px;font-size:.9rem}
+.legend i{display:inline-block;width:18px;height:14px;border-radius:3px;vertical-align:middle;margin-left:8px;border:1px solid #8a7a55}
+/* modals */
+.modal{position:fixed;inset:0;background:rgba(10,25,40,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal.open{display:flex}
+.modal .box{background:#fff;border-radius:14px;max-width:1100px;width:100%;max-height:88vh;overflow:auto;padding:18px 20px;border:3px solid var(--gold);position:relative}
+.modal h2{margin:0 0 12px;color:var(--navy)}
+.modal .x{position:absolute;top:10px;left:12px;background:#eef3f8;border:0;border-radius:50%;width:34px;height:34px;font-size:1.2rem;cursor:pointer}
+table.cmp{border-collapse:collapse;width:100%;font-size:.88rem;min-width:820px}
+table.cmp th,table.cmp td{border:1px solid #d6dee6;padding:6px 9px;text-align:right;vertical-align:top}
+table.cmp th{background:#0b3b66;color:#fff;white-space:nowrap}
+table.cmp tbody tr:nth-child(even){background:#f6f9fc}
+.tblwrap{overflow:auto}
+.lists{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.lists h3{margin:0 0 6px;color:var(--navy)}
+.lists button{display:flex;gap:10px;align-items:center;width:100%;text-align:right;background:#f6f9fc;border:1px solid #d6dee6;border-radius:10px;padding:7px 12px;margin-bottom:6px;cursor:pointer}
+.lists button:hover{background:#eaf3fb}
+.lists .mf{width:32px;height:22px;border:1px solid #ccc;border-radius:3px;overflow:hidden;flex:none}
+.lists .mf svg{display:block;width:100%;height:100%}
+footer.src{padding:10px 22px 26px;font-size:.85rem;color:var(--ink-soft)}
+footer.src h3{margin:6px 0;color:var(--navy);font-size:1rem}
+footer.src ul{margin:4px 0;padding-right:20px}
+@media (max-width:980px){
+  main{grid-template-columns:1fr}
+  .map-wrap{height:62vh;min-height:420px}
+  aside#panel{height:auto;min-height:0;max-height:none}
+  header.top h1{font-size:1.25rem}
+  .student-card{bottom:10px;right:10px;padding:7px 12px}
+  .student-card .sc-line{font-size:.88rem}
+  .student-card .sc-line+.sc-line{font-size:.82rem}
+  .compass{display:none}
+}
+@media (max-width:520px){
+  header.top{padding:10px 14px}
+  header.top h1{font-size:1.1rem}
+  header.top p{font-size:.78rem;margin-top:2px}
+  .toolbar{padding:8px 10px;gap:6px}
+  .toggles label{padding:3px 9px;font-size:.78rem}
+  .btn{padding:5px 11px;font-size:.78rem}
+  .map-wrap{height:auto;aspect-ratio:.8;min-height:0}
+  main{padding:10px}
+  .kv{grid-template-columns:100px 1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>الخريطة التفاعلية لشبه الجزيرة العربية</h1>
+  <p>مرّر المؤشر فوق أي دولة أو مسطح مائي لمعاينته، وانقر عليه لعرض بطاقة المعلومات التفصيلية. استخدم العجلة أو أزرار التكبير، واسحب الخريطة لتحريكها.</p>
+</header>
+
+<div class="toolbar">
+  <div class="search">
+    <input id="q" type="search" placeholder="ابحث عن دولة أو عاصمة أو مسطح مائي…" autocomplete="off" aria-label="بحث">
+    <div class="suggest" id="sug"></div>
+  </div>
+  <div class="toggles" aria-label="طبقات الخريطة">
+    <label><input type="checkbox" id="tC" checked> أسماء الدول</label>
+    <label><input type="checkbox" id="tCap" checked> أسماء العواصم</label>
+    <label><input type="checkbox" id="tW" checked> أسماء المسطحات المائية</label>
+  </div>
+  <button class="btn alt" id="bCompare" type="button">جدول المقارنة بين الدول</button>
+  <button class="btn alt" id="bList" type="button">قائمة العناصر القابلة للتحديد</button>
+  <button class="btn" id="bReset" type="button">إعادة ضبط الخريطة</button>
+</div>
+
+<main>
+  <section class="map-wrap" id="wrap" aria-label="الخريطة">
+    <svg id="map" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="خريطة شبه الجزيرة العربية"></svg>
+    <div class="zoomctl">
+      <button id="zIn" type="button" aria-label="تكبير">+</button>
+      <button id="zOut" type="button" aria-label="تصغير">−</button>
+      <button id="zHome" type="button" aria-label="إعادة ضبط موضع الخريطة" title="إعادة ضبط">⌂</button>
+    </div>
+    <div class="compass">↑ الشمال</div>
+    <div id="tip"></div>
+    <!-- بطاقة تعريف ثابتة: أسفل يمين الخريطة -->
+    <div class="student-card" role="note" aria-label="بيانات الطالبة">
+      <span class="sc-line">عمل الطالبة: رزان حسام المطلق</span>
+      <span class="sc-line">الصف الخامس – الشعبة 12</span>
+    </div>
+  </section>
+  <aside id="panel" aria-live="polite"></aside>
+</main>
+
+<footer class="src" id="sources"></footer>
+
+<div class="modal" id="mCompare"><div class="box"><button class="x" type="button" data-close aria-label="إغلاق">×</button><h2>جدول المقارنة بين الدول</h2><div class="tblwrap" id="cmpBody"></div></div></div>
+<div class="modal" id="mList"><div class="box"><button class="x" type="button" data-close aria-label="إغلاق">×</button><h2>العناصر الجغرافية القابلة للتحديد</h2><div class="lists" id="listBody"></div></div></div>
+
+<!-- بيانات الدول (منفصلة عن شيفرة الرسم) -->
+<script type="application/json" id="countries-data">[{"id":"sa","name":"المملكة العربية السعودية","official":"المملكة العربية السعودية","capital":"الرياض","aliases":["السعودية","Saudi"],"pop":{"value":"35,300,280","year":"منتصف 2024","kind":"تقدير رسمي","source":"الهيئة العامة للإحصاء السعودية، كما جُمعت في برنامج GLMM (مركز الخليج للأبحاث)"},"area":"2,149,690","ruler":{"name":"الملك سلمان بن عبدالعزيز آل سعود","title":"ملك المملكة وخادم الحرمين الشريفين؛ ولي العهد ورئيس مجلس الوزراء: الأمير محمد بن سلمان"},"government":"ملكية وراثية (النظام الأساسي للحكم، ومجلس الشورى هيئة استشارية)","currency":"الريال السعودي","language":"العربية","location":"تشغل معظم مساحة شبه الجزيرة العربية؛ يطل ساحلها الغربي على البحر الأحمر والشرقي على الخليج العربي، وتحدّها الأردن والعراق والكويت شمالًا، وقطر والإمارات وعُمان شرقًا وجنوبًا، واليمن جنوبًا.","about":"أكبر دول شبه الجزيرة العربية مساحةً وسكانًا، وفيها الحرمان الشريفان في مكة المكرمة والمدينة المنورة، وتتنوع تضاريسها بين الصحارى والسهول الساحلية والمرتفعات الجبلية.","cities":["الرياض","جدة","مكة المكرمة","المدينة المنورة","الدمام","أبها"],"features":["الربع الخالي","صحراء النفود الكبير","جبال الحجاز","جبال السروات","ساحل البحر الأحمر"]},{"id":"ae","name":"دولة الإمارات العربية المتحدة","official":"دولة الإمارات العربية المتحدة","capital":"أبوظبي","aliases":["الامارات","الإمارات","UAE"],"pop":{"value":"11,294,243","year":"منتصف 2024","kind":"تقدير","source":"الإحصاءات الوطنية كما جُمعت في برنامج GLMM؛ لا تنشر الجهات الرسمية تفصيلًا حسب الجنسية"},"area":"83,600","ruler":{"name":"الشيخ محمد بن زايد آل نهيان","title":"رئيس الدولة؛ نائب الرئيس ورئيس مجلس الوزراء: الشيخ محمد بن راشد آل مكتوم"},"government":"اتحاد فيدرالي من سبع إمارات يحكمه المجلس الأعلى للاتحاد","currency":"الدرهم الإماراتي","language":"العربية","location":"في الجنوب الشرقي من شبه الجزيرة العربية على الخليج العربي وخليج عُمان؛ تحدّها السعودية جنوبًا وغربًا وسلطنة عُمان شرقًا وشمالًا شرقيًا.","about":"اتحاد من سبع إمارات هي: أبوظبي ودبي والشارقة وعجمان وأم القيوين ورأس الخيمة والفجيرة، ويجمع ساحلها بين الخليج العربي وخليج عُمان.","cities":["أبوظبي","دبي","الشارقة","العين","رأس الخيمة","الفجيرة"],"features":["ساحل الخليج العربي","جبل حفيت","جبال الحجر الغربية","صحراء الربع الخالي (طرفها الجنوبي)"]},{"id":"om","name":"سلطنة عُمان","official":"سلطنة عُمان","capital":"مسقط","aliases":["عمان","عُمان","Oman"],"pop":{"value":"5,203,674","year":"منتصف 2024","kind":"تقدير رسمي","source":"المركز الوطني للإحصاء والمعلومات في عُمان، كما جُمع في برنامج GLMM"},"area":"309,500","ruler":{"name":"السلطان هيثم بن طارق آل سعيد","title":"سلطان عُمان"},"government":"سلطنة (ملكية وراثية) ويضم مجلس عُمان مجلسي الدولة والشورى","currency":"الريال العُماني","language":"العربية","location":"في الطرف الجنوبي الشرقي من شبه الجزيرة العربية، تطل على بحر العرب وخليج عُمان، ويقع جزؤها الشمالي (مسندم) عند مضيق هرمز.","about":"يمتد ساحلها طويلًا على بحر العرب وخليج عُمان، وفيها سلاسل جبلية وسهول ساحلية وجزء كبير من الصحراء الداخلية.","cities":["مسقط","صلالة","صحار","نزوى","صور"],"features":["جبال الحجر","جبل شمس","محافظة مسندم عند مضيق هرمز","جبال ظفار","ساحل بحر العرب"]},{"id":"qa","name":"دولة قطر","official":"دولة قطر","capital":"الدوحة","aliases":["قطر","Qatar"],"pop":{"value":"3,143,491","year":"منتصف 2024","kind":"تقدير","source":"الإحصاءات الوطنية كما جُمعت في برنامج GLMM؛ لا تنشر الجهات الرسمية تفصيلًا حسب الجنسية"},"area":"11,586","ruler":{"name":"الشيخ تميم بن حمد آل ثاني","title":"أمير دولة قطر"},"government":"إمارة (ملكية دستورية وراثية)؛ مجلس الشورى هيئة تشريعية","currency":"الريال القطري","language":"العربية","location":"شبه جزيرة صغيرة تمتد شمالًا داخل الخليج العربي من الساحل الشرقي لشبه الجزيرة العربية، وتحدّها السعودية جنوبًا.","about":"دولة صغيرة المساحة، تتركز مدنها على الساحل الشرقي، وتطل من ثلاث جهات على مياه الخليج العربي.","cities":["الدوحة","الريان","الوكرة","الخور","أم صلال"],"features":["شبه جزيرة قطر","خور العديد (البحر الداخلي)","ساحل الخليج العربي"]},{"id":"bh","name":"مملكة البحرين","official":"مملكة البحرين","capital":"المنامة","aliases":["البحرين","Bahrain"],"pop":{"value":"1,588,670","year":"منتصف 2024","kind":"تقدير رسمي","source":"الجهات الإحصائية الوطنية في البحرين، كما جُمعت في برنامج GLMM"},"area":"نحو 780","ruler":{"name":"الملك حمد بن عيسى آل خليفة","title":"ملك مملكة البحرين"},"government":"ملكية دستورية وراثية","currency":"الدينار البحريني","language":"العربية","location":"أرخبيل من الجزر في الخليج العربي قبالة الساحل الشرقي للسعودية، وتصلها بالسعودية جسر الملك فهد، وتقع شمال غرب قطر.","about":"أرخبيل أكبر جزره جزيرة البحرين، وهي أصغر دول شبه الجزيرة العربية مساحةً.","cities":["المنامة","المحرق","الرفاع","مدينة عيسى"],"features":["جزيرة البحرين","جبل الدخان","جسر الملك فهد"]},{"id":"kw","name":"دولة الكويت","official":"دولة الكويت","capital":"مدينة الكويت","aliases":["الكويت","Kuwait"],"pop":{"value":"4,881,254","year":"نهاية 2024","kind":"تقدير رسمي","source":"الهيئة العامة للمعلومات المدنية في الكويت، كما جُمعت في برنامج GLMM (أرقام نهاية العام)"},"area":"17,818","ruler":{"name":"الشيخ مشعل الأحمد الجابر الصباح","title":"أمير دولة الكويت؛ ولي العهد: الشيخ صباح الخالد الحمد المبارك الصباح"},"government":"إمارة (ملكية دستورية وراثية) ولها مجلس أمة","currency":"الدينار الكويتي","language":"العربية","location":"في الركن الشمالي الغربي من الخليج العربي، بين العراق شمالًا وغربًا والسعودية جنوبًا.","about":"دولة صغيرة المساحة على رأس الخليج العربي، تضم عددًا من الجزر أكبرها جزيرة بوبيان.","cities":["مدينة الكويت","حولي","الجهراء","الأحمدي"],"features":["خليج الكويت","جزيرة بوبيان","جزيرة فيلكا"]},{"id":"ye","name":"الجمهورية اليمنية","official":"الجمهورية اليمنية","capital":"صنعاء","capitalNote":"العاصمة المعلنة؛ وعدن مقر الحكومة المعترف بها دوليًا","aliases":["اليمن","Yemen","عدن"],"pop":{"value":"41,773,878","year":"2025","kind":"تقدير أممي","source":"الأمم المتحدة، تنقيح 2024 لتوقعات سكان العالم (WPP 2024)؛ ليس تعدادًا رسميًا حديثًا"},"area":"527,968","ruler":{"name":"الدكتور رشاد محمد العليمي","title":"رئيس مجلس القيادة الرئاسي (الحكومة المعترف بها دوليًا)"},"government":"جمهورية؛ يتولى مجلس القيادة الرئاسي مهام رئاسة الدولة منذ أبريل 2022","currency":"الريال اليمني","language":"العربية","location":"في الجنوب الغربي من شبه الجزيرة العربية، تطل على البحر الأحمر غربًا وخليج عدن وبحر العرب جنوبًا، وتحدّها السعودية شمالًا وعُمان شرقًا.","about":"تضم جبالًا عالية وسهولًا ساحلية وهضابًا وأراضي صحراوية، ومنها جزيرة سقطرى في بحر العرب المسجلة في قائمة التراث العالمي.","cities":["صنعاء","عدن","تعز","الحديدة","المكلا"],"features":["جبال السروات","جزيرة سقطرى","وادي حضرموت","السهل التهامي","مضيق باب المندب"],"note":"الوضع السياسي في اليمن متغير؛ يُعرض هنا رأس الحكومة المعترف بها دوليًا، ولا يعني ذلك شمول السلطة على كامل البلاد."}]</script>
+<!-- بيانات المسطحات المائية -->
+<script type="application/json" id="waters-data">[{"id":"gulf","geoKey":"gulf","name":"الخليج العربي","official":"الخليج العربي","type":"خليج","kind":"open","aliases":["الخليج","Persian Gulf"],"location":"مسطح مائي شبه مغلق شمال غرب بحر العرب، بين شبه الجزيرة العربية غربًا وجنوبًا وإيران شرقًا وشمالًا.","countries":["السعودية","الكويت","البحرين","قطر","الإمارات","سلطنة عُمان (مسندم)","العراق","إيران"],"connects":["خليج عُمان (عبر مضيق هرمز)","بحر العرب (عبر خليج عُمان)"],"extent":"يمتد من مصب شط العرب شمالًا غربيًا إلى مضيق هرمز جنوبًا شرقيًا، ويضم جزرًا منها البحرين وفيلكا وبوبيان، ويتميز بقلة عمقه نسبيًا.","importance":"من أهم مناطق إنتاج النفط والغاز وتصديرهما في العالم، وتقع على سواحله موانئ كبرى تخدم التجارة الإقليمية والدولية، ولا يخرج منه إلى المحيط المفتوح إلا عبر مضيق هرمز.","extra":["تسمّيه إيران «الخليج الفارسي»، وتعتمد الخريطة هنا التسمية العربية.","يصب فيه شط العرب الذي يجمع دجلة والفرات والكارون."]},{"id":"red","geoKey":"red","name":"البحر الأحمر","official":"البحر الأحمر","type":"بحر","kind":"open","aliases":["Red Sea"],"location":"بين الساحل الغربي لشبه الجزيرة العربية وساحل شمال شرق إفريقيا.","countries":["السعودية","اليمن","مصر","السودان","إريتريا","جيبوتي (عند باب المندب)","الأردن وإسرائيل (عند رأس خليج العقبة)"],"connects":["البحر المتوسط (عبر قناة السويس)","خليج العقبة وخليج السويس في شماله","خليج عدن (عبر مضيق باب المندب)"],"extent":"يمتد طوليًا من الشمال الغربي إلى الجنوب الشرقي، ويتفرع شمالًا إلى خليجي العقبة والسويس، ويتصل جنوبًا بخليج عدن عند باب المندب.","importance":"يصل مع قناة السويس بين المحيط الهندي والبحر المتوسط، فيشكل أحد أقصر الطرق التجارية بين آسيا وأوروبا، وتقع عليه موانئ مهمة مثل جدة والحديدة وبورتسودان.","extra":["يتميز بشعاب مرجانية واسعة على سواحله."]},{"id":"arab","geoKey":"arabian","name":"بحر العرب","official":"بحر العرب","type":"بحر","kind":"open","aliases":["Arabian Sea"],"location":"الجزء الشمالي الغربي من المحيط الهندي، جنوب شرق شبه الجزيرة العربية.","countries":["سلطنة عُمان","اليمن (بما فيها جزيرة سقطرى)","باكستان","الهند","الصومال (عند القرن الإفريقي)"],"connects":["خليج عُمان","خليج عدن","المحيط الهندي"],"extent":"مسطح مائي مفتوح واسع يطل على سواحل جنوب شرق الجزيرة العربية وغرب جنوب آسيا، ويتصل بالمحيط الهندي من الجنوب.","importance":"يربط بين طرق الملاحة القادمة من الخليج العربي والبحر الأحمر وبين المحيط الهندي، وفيه خطوط ملاحة رئيسة بين آسيا وإفريقيا وأوروبا، ومن موانئه صلالة وصحار.","extra":["يؤثر في المنطقة بالرياح الموسمية."]},{"id":"oman","geoKey":"oman","name":"خليج عُمان","official":"خليج عُمان","type":"خليج","kind":"open","aliases":["Gulf of Oman"],"location":"بين الساحل الشمالي الشرقي لسلطنة عُمان والساحل الجنوبي لإيران وباكستان.","countries":["سلطنة عُمان","الإمارات","إيران","باكستان"],"connects":["الخليج العربي (عبر مضيق هرمز)","بحر العرب"],"extent":"ذراع من بحر العرب يمتد شمالًا غربيًا حتى مضيق هرمز، وهو البوابة البحرية لمن يدخل الخليج العربي أو يخرج منه.","importance":"تعبره ناقلات النفط والغاز والسفن التجارية في طريقها من الخليج العربي وإليه، وتقع على سواحله موانئ مهمة منها مسقط والفجيرة وصحار.","extra":[]},{"id":"aden","geoKey":"aden","name":"خليج عدن","official":"خليج عدن","type":"خليج","kind":"open","aliases":["Gulf of Aden"],"location":"بين الساحل الجنوبي لليمن والساحل الشمالي للصومال وجيبوتي.","countries":["اليمن","الصومال","جيبوتي"],"connects":["البحر الأحمر (عبر مضيق باب المندب)","بحر العرب"],"extent":"يمتد من مضيق باب المندب غربًا إلى بحر العرب شرقًا، ويقع بين شبه الجزيرة العربية والقرن الإفريقي.","importance":"مدخل جنوبي للبحر الأحمر وقناة السويس، تعبره حركة ملاحية كثيفة بين آسيا وأوروبا، وتقع عليه موانئ مهمة منها عدن وجيبوتي.","extra":[]},{"id":"hormuz","name":"مضيق هرمز","official":"مضيق هرمز","type":"مضيق","kind":"strait","aliases":["Hormuz","Strait of Hormuz"],"marker":[56.5,26.45],"location":"في الطرف الجنوبي الشرقي من الخليج العربي، بين شبه جزيرة مسندم العُمانية جنوبًا وإيران شمالًا.","countries":["سلطنة عُمان","إيران"],"connects":["الخليج العربي","خليج عُمان"],"extent":"ممر مائي ضيق يصل الخليج العربي بخليج عُمان، وتقع فيه جزر وتخضع حركة الملاحة فيه لممرات ملاحية محددة.","importance":"هو المنفذ البحري الوحيد للخليج العربي إلى البحار المفتوحة، وتمر عبره نسبة كبيرة من صادرات النفط والغاز العالمية.","extra":["الموضع على الخريطة تقريبي لأغراض التعليم."]},{"id":"bab","name":"مضيق باب المندب","official":"مضيق باب المندب","type":"مضيق","kind":"strait","aliases":["باب المندب","Bab el-Mandeb"],"marker":[43.35,12.66],"location":"بين الطرف الجنوبي الغربي لشبه الجزيرة العربية (اليمن) والقرن الإفريقي (جيبوتي وإريتريا).","countries":["اليمن","جيبوتي","إريتريا"],"connects":["البحر الأحمر","خليج عدن"],"extent":"ممر مائي ضيق تقسمه جزيرة ميون (بريم) إلى قناتين، ويصل البحر الأحمر بخليج عدن.","importance":"بوابة الجنوب لقناة السويس والبحر الأحمر، وتعبره سفن كثيرة بين آسيا وأوروبا، وتتأثر الملاحة فيه بالأوضاع الأمنية في المنطقة.","extra":["تتعدد الروايات في تفسير أصل اسم «باب المندب»."]},{"id":"aqaba","name":"خليج العقبة","official":"خليج العقبة","type":"خليج","kind":"open","aliases":["العقبة","Gulf of Aqaba"],"marker":[34.64,28.5],"location":"ذراع شمالي شرقي للبحر الأحمر بين شبه جزيرة سيناء وشمال غرب السعودية.","countries":["مصر","السعودية","الأردن","إسرائيل"],"connects":["البحر الأحمر"],"extent":"خليج طولي ضيق يتصل بالبحر الأحمر عند مضيق تيران.","importance":"تقع على رأسه ميناءا العقبة الأردني وإيلات، ويخدم تجارة الأردن البحرية.","extra":[]},{"id":"suez","name":"خليج السويس","official":"خليج السويس","type":"خليج","kind":"open","aliases":["السويس","Gulf of Suez"],"marker":[33.0,28.6],"location":"ذراع شمالي غربي للبحر الأحمر غرب شبه جزيرة سيناء.","countries":["مصر"],"connects":["البحر الأحمر","قناة السويس"],"extent":"خليج طولي يمتد من البحر الأحمر شمالًا حتى مدينة السويس.","importance":"ينتهي عند المدخل الجنوبي لقناة السويس التي تربط البحر الأحمر بالبحر المتوسط.","extra":[]}]</script>
+<!-- حدود جغرافية حقيقية: Natural Earth 1:50m (مُبسّطة ومُسقَطة) -->
+<script type="application/json" id="geo-data">{"proj":{"lon0":25.5,"lat0":41.0,"k":40.0,"cx":0.9238795325112867},"countries":{"ye":"M1000.8,981.2L995.9,984.3L991.4,988.3L988.1,993.1L985.7,1001.7L987.5,1009.6L987.3,1013.8L973.1,1021.6L970.0,1022.4L967.5,1024.8L964.7,1026.5L954.3,1030.9L942.9,1034.4L924.9,1038.5L917.9,1042.9L911.6,1046.0L901.9,1046.9L888.7,1051.1L881.4,1054.5L872.3,1060.0L870.2,1061.7L868.6,1065.8L865.8,1069.3L860.3,1075.0L856.2,1078.0L853.4,1078.2L848.1,1079.8L841.8,1080.1L831.1,1078.1L828.4,1079.5L826.1,1081.7L817.9,1085.7L809.6,1093.5L803.5,1095.6L793.6,1098.1L786.7,1101.4L782.1,1102.7L776.1,1103.4L765.1,1103.0L754.6,1104.2L744.9,1106.5L740.4,1110.7L735.2,1117.3L726.7,1120.1L724.7,1122.5L722.1,1127.4L711.6,1129.4L706.5,1127.3L696.9,1133.2L693.3,1134.2L687.8,1134.5L683.9,1135.7L681.1,1135.3L677.6,1133.0L670.2,1130.2L664.7,1132.0L664.3,1126.4L655.3,1109.3L657.2,1092.3L655.4,1085.6L650.0,1079.6L650.2,1071.9L646.9,1060.7L647.5,1057.8L643.8,1047.3L643.5,1045.5L644.4,1044.1L644.4,1042.5L642.9,1039.8L641.4,1034.7L634.1,1030.7L635.5,1026.9L638.9,1029.4L639.3,1026.9L639.3,1025.1L636.3,1013.8L640.8,998.7L639.3,985.1L648.0,978.0L650.6,973.4L652.8,972.4L653.6,969.2L653.5,967.5L652.1,966.1L651.0,962.3L651.4,957.5L652.5,951.8L654.9,950.4L655.5,949.3L653.6,947.0L653.8,945.6L657.9,941.7L662.2,939.3L664.2,939.4L668.8,941.1L673.1,945.4L676.4,946.2L678.7,946.0L680.6,947.0L684.0,945.3L686.8,945.4L689.4,944.1L696.8,943.4L703.9,943.8L711.3,942.7L726.1,942.9L729.4,943.8L735.6,947.2L740.4,947.9L769.1,950.7L784.5,949.4L793.6,961.9L799.8,962.1L803.8,960.2L810.9,955.5L816.0,942.1L837.9,913.7L870.0,896.7L875.6,895.1L978.5,880.2L1006.3,948.0L1008.9,949.3L1019.4,974.1L1000.8,981.2ZM630.4,1028.8L630.0,1027.2L630.8,1023.7L632.0,1022.7L632.8,1025.3L631.6,1027.9L630.4,1028.8ZM635.3,1093.1L636.9,1089.9L639.1,1089.4L637.7,1091.8L635.3,1093.1ZM638.4,1082.0L635.4,1079.7L637.9,1077.3L639.3,1079.5L638.4,1082.0ZM1046.7,1135.0L1050.2,1133.6L1060.1,1133.4L1072.1,1137.9L1069.9,1139.1L1068.5,1140.7L1063.2,1142.1L1058.0,1145.6L1042.8,1147.2L1038.4,1146.3L1034.7,1143.0L1027.9,1138.7L1030.6,1135.9L1032.2,1133.5L1036.0,1131.4L1039.9,1131.7L1044.5,1134.5L1046.7,1135.0Z","ae":"M1140.6,617.2L1140.9,639.3L1141.5,640.8L1140.2,641.1L1137.0,645.3L1134.7,646.7L1131.1,650.1L1129.5,650.4L1126.0,645.6L1127.4,644.9L1127.8,643.7L1127.2,641.9L1125.8,641.2L1124.0,641.1L1120.6,643.5L1119.6,645.3L1119.9,654.6L1118.9,656.9L1118.6,660.4L1120.0,666.0L1118.3,670.3L1119.7,671.1L1124.5,671.4L1126.8,676.3L1126.6,677.5L1119.0,679.3L1115.9,679.0L1110.4,680.3L1107.5,682.4L1109.4,684.6L1109.8,687.2L1109.0,691.0L1097.6,718.6L1097.0,731.8L1094.6,735.0L999.8,722.7L964.3,676.8L963.5,674.9L963.4,668.6L964.7,666.5L966.9,670.0L969.5,669.5L970.7,669.8L971.6,677.0L973.5,679.6L975.8,680.6L983.7,681.2L988.6,680.2L998.2,675.5L1003.3,673.8L1017.2,674.1L1028.4,676.1L1045.9,677.2L1049.3,676.9L1058.7,673.2L1064.5,669.8L1067.9,668.9L1070.2,665.7L1073.0,658.8L1074.7,657.5L1076.3,655.1L1077.6,651.4L1080.8,647.6L1093.8,638.3L1101.4,630.5L1102.1,628.0L1106.2,624.2L1109.5,620.1L1125.0,608.2L1128.1,603.4L1130.1,597.5L1131.4,597.3L1133.3,598.1L1133.5,602.2L1132.5,612.4L1133.9,614.2L1136.4,615.0L1137.4,614.9L1138.1,614.0L1140.6,617.2ZM1137.8,628.9L1137.4,628.0L1135.8,627.8L1134.9,631.5L1136.0,631.6L1137.5,630.6L1137.8,628.9ZM1025.8,669.9L1023.3,668.4L1028.6,666.3L1031.5,663.6L1032.7,665.2L1030.4,668.8L1028.5,669.7L1025.8,669.9ZM1001.5,668.7L1000.9,665.9L1002.6,664.9L1003.6,666.7L1001.5,668.7ZM1050.6,674.3L1046.8,673.9L1045.8,674.6L1039.7,673.2L1041.8,671.6L1047.1,669.6L1050.6,672.9L1050.6,674.3ZM1070.1,663.1L1066.4,662.3L1065.6,661.2L1067.9,659.7L1070.4,662.3L1070.1,663.1Z","sa":"M420.4,624.7L414.7,618.6L407.6,615.9L406.7,614.2L407.7,612.5L408.5,614.2L409.8,615.2L415.7,617.7L422.2,623.0L423.3,623.4L421.4,624.7L420.4,624.7ZM612.2,971.6L610.7,969.7L612.0,967.9L616.1,971.7L615.6,977.2L612.4,973.1L608.4,973.9L606.0,972.6L602.4,968.8L601.5,966.1L604.5,964.3L605.5,962.1L604.6,959.9L606.7,960.3L607.8,962.5L608.4,968.9L607.8,970.0L609.3,971.4L612.2,971.6ZM978.5,880.2L875.6,895.1L870.0,896.7L837.9,913.7L816.0,942.1L810.9,955.5L803.8,960.2L799.8,962.1L793.6,961.9L784.5,949.4L769.1,950.7L740.4,947.9L735.6,947.2L729.4,943.8L726.1,942.9L711.3,942.7L703.9,943.8L696.8,943.4L689.4,944.1L686.8,945.4L684.0,945.3L680.6,947.0L678.7,946.0L676.4,946.2L673.1,945.4L668.8,941.1L664.2,939.4L662.2,939.3L657.9,941.7L653.8,945.6L653.6,947.0L655.5,949.3L654.9,950.4L652.5,951.8L651.4,957.5L651.0,962.3L652.1,966.1L653.5,967.5L653.6,969.2L652.8,972.4L650.6,973.4L648.0,978.0L639.3,985.1L638.9,981.9L636.8,977.2L636.6,973.9L635.6,970.5L633.7,967.9L630.2,965.3L629.9,961.6L627.3,958.0L623.9,955.1L622.0,949.7L620.6,942.6L611.7,933.2L600.5,924.6L597.1,919.7L591.6,909.8L588.8,901.9L581.3,892.9L581.0,889.4L577.1,876.7L569.6,860.4L567.2,857.8L565.1,854.1L563.9,849.8L558.6,847.1L553.7,840.3L538.8,829.4L531.6,828.3L525.8,824.4L521.6,819.3L517.0,810.5L509.1,801.0L502.4,787.6L504.5,782.7L504.3,779.2L498.4,764.7L499.7,758.7L500.2,751.9L502.4,744.3L501.2,736.3L498.9,732.0L499.2,729.2L496.6,727.8L494.6,724.7L496.7,724.7L492.8,720.4L491.4,718.1L489.9,712.2L488.0,707.8L482.0,697.7L479.1,691.5L472.6,683.6L465.6,677.7L461.1,675.0L459.0,672.6L455.3,672.5L451.3,669.0L445.1,668.3L437.5,655.4L431.7,647.2L434.8,641.6L433.1,634.0L430.5,628.4L422.1,614.4L416.2,609.9L414.0,603.9L413.0,598.4L407.2,595.8L397.3,576.2L391.5,569.4L389.2,564.8L382.5,557.2L379.3,549.6L372.6,542.7L366.7,530.6L357.7,518.6L354.0,516.5L344.7,515.7L340.8,514.8L337.2,517.4L336.9,514.1L339.4,509.4L342.9,499.7L343.7,491.2L349.3,465.9L388.6,472.4L390.6,472.0L405.6,460.2L414.0,446.7L415.9,445.4L442.3,440.2L443.1,439.5L449.0,426.8L461.2,420.0L442.7,399.7L423.5,380.3L497.5,360.2L498.8,359.7L504.3,355.0L549.5,362.4L553.5,364.3L612.5,396.8L641.5,420.2L709.2,471.9L770.8,477.5L777.2,476.2L810.5,480.4L813.8,486.5L816.1,494.9L819.3,498.7L847.8,498.3L849.9,502.0L850.8,505.8L854.6,514.7L860.1,521.6L861.4,524.2L862.3,528.0L861.3,529.4L861.0,531.0L865.0,534.8L877.2,540.3L874.9,542.5L883.4,552.8L888.3,553.9L894.9,561.8L904.9,566.8L910.9,573.5L906.4,572.0L905.7,572.9L906.4,578.9L912.2,583.8L913.3,587.7L911.1,596.0L907.4,595.1L906.6,595.6L908.4,601.5L910.2,606.1L912.4,609.8L914.2,615.1L915.8,617.4L922.2,623.0L924.2,627.7L926.0,636.5L930.0,641.4L932.2,645.2L935.1,648.4L937.0,652.8L939.7,656.2L941.1,657.0L945.8,657.4L952.3,655.7L954.9,657.4L957.6,657.2L957.8,658.8L956.0,660.9L953.8,666.4L963.4,668.6L963.5,674.9L964.3,676.8L999.8,722.7L1094.0,735.1L1094.6,735.0L1097.0,731.8L1113.9,759.9L1089.3,840.2L978.5,880.2ZM409.7,612.0L408.1,610.6L408.2,607.5L409.6,605.8L409.5,608.2L410.0,610.6L409.7,612.0Z","qa":"M957.0,654.2L945.8,657.4L941.1,657.0L939.7,656.2L937.0,652.8L935.1,648.4L936.7,644.5L934.1,632.9L933.3,624.0L933.6,622.2L937.5,615.5L942.5,600.7L946.4,596.8L952.1,593.9L956.7,599.6L962.4,603.9L963.5,608.8L961.8,612.7L960.3,619.0L964.6,634.1L964.9,637.9L964.0,641.4L962.1,644.4L958.2,653.3L957.0,654.2Z","om":"M1225.4,831.9L1224.7,831.6L1224.7,826.5L1230.2,820.1L1233.7,812.8L1236.2,819.4L1231.9,823.0L1229.6,829.3L1227.7,831.2L1225.4,831.9ZM1019.4,974.1L1008.9,949.3L1006.3,948.0L978.5,880.2L1089.3,840.2L1113.9,759.9L1097.0,731.8L1097.3,723.1L1097.6,718.6L1109.0,691.0L1109.8,687.2L1109.4,684.6L1107.5,682.4L1110.4,680.3L1115.9,679.0L1119.0,679.3L1126.6,677.5L1126.8,676.3L1124.5,671.4L1119.7,671.1L1118.3,670.3L1120.0,666.0L1118.6,660.4L1118.9,656.9L1119.9,654.6L1119.6,645.3L1120.6,643.5L1124.0,641.1L1125.8,641.2L1127.2,641.9L1127.8,643.7L1127.4,644.9L1126.0,645.6L1129.5,650.4L1131.1,650.1L1134.7,646.7L1137.0,645.3L1140.2,641.1L1141.5,640.8L1145.2,651.3L1150.8,661.2L1155.7,666.6L1160.9,674.0L1168.6,680.8L1172.2,683.1L1186.7,687.9L1205.5,691.3L1213.0,695.0L1215.6,695.3L1219.5,694.2L1222.4,694.3L1229.6,699.3L1231.7,704.1L1234.7,706.6L1237.4,710.6L1239.1,714.8L1245.2,721.1L1249.5,728.3L1253.9,733.6L1257.8,736.9L1268.4,739.6L1268.9,743.2L1268.5,747.8L1267.6,751.2L1263.2,757.8L1262.1,761.9L1257.1,768.7L1251.7,780.0L1249.3,782.6L1240.5,788.4L1234.1,795.5L1226.6,807.7L1218.6,823.7L1213.9,824.5L1210.9,824.2L1208.8,823.0L1210.1,816.0L1207.3,816.4L1204.8,817.2L1199.1,826.3L1195.9,830.2L1193.7,841.8L1191.5,847.8L1190.5,852.9L1190.5,855.7L1192.2,862.7L1192.3,869.9L1194.1,879.3L1189.1,881.7L1179.9,882.2L1170.6,883.9L1162.5,886.9L1157.7,889.9L1151.3,896.5L1147.5,913.4L1141.3,920.5L1137.1,922.0L1127.0,922.6L1112.9,924.6L1107.9,926.3L1099.6,936.6L1099.0,939.8L1100.6,942.2L1101.1,944.7L1100.3,947.2L1096.6,953.7L1092.5,958.4L1081.7,961.4L1077.8,959.6L1074.2,958.8L1067.2,958.7L1055.7,959.8L1051.5,963.3L1044.9,965.8L1038.8,969.6L1027.3,971.1L1019.4,974.1ZM1137.4,614.9L1133.9,614.2L1132.5,612.4L1133.5,602.2L1133.3,598.1L1131.4,597.3L1130.1,597.5L1133.2,591.7L1134.4,590.8L1135.6,591.2L1138.4,590.6L1141.1,585.7L1142.4,586.0L1143.0,586.9L1142.5,595.7L1140.9,607.8L1139.3,609.9L1138.5,611.6L1138.1,614.0L1137.4,614.9ZM1136.0,631.6L1134.9,631.5L1135.1,629.3L1135.8,627.8L1137.4,628.0L1137.8,628.9L1137.5,630.6L1136.0,631.6Z","kw":"M839.6,455.9L838.1,455.5L834.5,448.0L835.7,446.0L835.9,444.5L836.6,444.1L837.4,441.6L838.3,440.8L844.4,448.7L844.1,452.2L841.7,455.0L839.6,455.9ZM847.8,498.3L819.3,498.7L816.1,494.9L813.8,486.5L810.5,480.4L777.2,476.2L786.0,466.1L791.1,458.5L798.3,442.4L800.0,440.0L806.8,436.8L818.3,436.1L822.4,436.9L830.7,440.7L830.5,442.2L831.7,446.6L836.5,455.3L836.8,457.1L830.4,455.3L821.3,463.3L821.2,464.3L825.8,465.4L829.1,465.3L831.4,464.6L833.4,465.8L838.3,480.8L840.8,483.9L844.0,489.5L845.9,494.7L847.8,498.3Z","bh":"M926.6,607.7L925.5,606.7L922.6,601.4L923.5,597.7L922.1,592.4L922.8,590.8L926.2,590.1L927.1,590.4L926.0,592.1L927.9,595.0L928.2,599.9L927.8,604.7L926.6,607.7Z"},"neighbors":{"TKM":{"name":"تركمانستان","d":"M1020.0,89.8L1017.0,77.9L1018.2,76.1L1019.7,76.2L1020.0,89.8ZM1347.7,0.0L1352.4,12.7L1362.7,26.7L1365.2,38.6L1372.9,45.7L1404.5,64.9L1414.0,73.6L1428.8,81.9L1434.2,80.9L1482.4,110.5L1495.6,110.2L1519.1,120.5L1519.9,122.7L1516.1,128.6L1516.0,146.1L1500.7,143.4L1488.0,137.2L1483.4,141.3L1480.2,150.0L1463.0,150.5L1452.9,154.7L1441.7,186.4L1423.1,199.5L1390.6,206.2L1392.1,212.9L1387.9,222.2L1374.3,229.8L1366.0,229.9L1360.2,233.2L1348.3,222.3L1334.9,222.7L1324.6,214.8L1321.6,215.2L1321.2,205.3L1317.6,200.9L1319.7,192.4L1316.3,174.3L1287.6,174.5L1277.3,161.5L1254.8,149.9L1249.2,139.6L1231.2,132.7L1210.7,133.4L1200.3,126.8L1177.2,121.1L1175.5,114.8L1171.2,111.3L1143.4,110.0L1139.1,112.4L1137.2,116.8L1111.6,116.0L1104.3,118.0L1086.5,128.9L1079.1,141.2L1060.3,146.7L1050.1,146.3L1046.7,122.9L1048.4,82.0L1043.0,75.9L1042.3,71.6L1028.7,66.4L1022.1,69.4L1020.9,66.1L1025.0,55.7L1030.7,58.5L1038.6,58.1L1033.7,53.2L1034.3,43.6L1015.8,40.5L1014.5,44.2L1017.6,49.0L1009.0,37.8L1006.8,31.2L1006.4,24.1L1013.7,0.0L1021.6,7.0L1039.0,7.3L1044.5,13.4L1048.4,14.1L1060.4,11.2L1067.2,12.3L1065.0,6.6L1077.5,5.7L1079.8,0.0L1347.7,0.0Z"},"TUR":{"name":"تركيا","d":"M17.6,32.9L6.2,34.6L8.9,32.1L15.5,30.5L17.6,32.9ZM668.6,1.3L673.4,11.2L667.8,20.7L672.9,33.3L671.3,34.9L681.5,39.1L698.4,40.2L713.9,54.0L705.4,49.3L700.5,53.3L698.1,63.1L684.5,64.9L686.6,71.3L690.2,74.2L690.0,82.6L693.7,86.6L694.7,104.5L700.3,106.6L691.5,123.7L705.5,131.6L703.8,133.7L704.9,142.6L713.0,148.4L711.9,154.3L706.1,153.0L694.1,160.9L691.1,157.9L690.8,150.0L687.9,147.9L671.7,150.9L650.1,145.3L644.4,147.0L638.4,145.1L623.0,155.7L621.3,150.8L617.3,148.1L612.0,151.8L591.9,156.4L561.9,156.1L536.5,167.0L512.1,172.7L490.3,172.3L478.3,165.5L469.0,163.9L441.1,174.3L427.4,173.9L422.8,169.7L412.4,167.9L407.9,181.7L411.6,190.6L401.9,193.2L400.9,199.9L392.7,206.7L384.1,203.3L386.4,200.1L381.0,187.6L395.0,173.6L394.7,167.7L389.8,163.6L375.5,171.0L370.9,176.1L365.6,177.0L340.1,167.3L325.2,175.8L312.5,188.2L302.8,192.7L269.6,198.6L254.2,192.7L241.0,178.6L212.1,167.1L190.1,165.4L182.8,189.2L174.9,187.7L154.8,193.7L137.6,187.0L130.8,172.3L128.2,171.4L122.6,173.0L103.6,167.5L99.6,172.5L93.1,174.6L95.5,169.9L79.7,173.0L72.2,171.5L92.6,166.7L101.3,158.8L65.2,160.9L66.5,154.9L75.2,153.4L74.7,150.0L63.5,144.4L60.9,135.9L57.9,133.7L63.7,131.0L64.0,120.9L50.9,117.8L43.7,112.1L40.0,114.0L29.2,108.9L31.2,105.2L33.9,105.3L32.4,95.0L34.8,94.4L40.2,97.7L40.5,103.3L43.4,106.6L45.4,103.3L50.3,105.1L60.8,101.9L52.0,100.7L46.7,91.6L55.9,84.5L48.6,81.6L50.0,75.4L43.7,68.3L51.7,58.0L22.7,61.3L22.0,59.2L25.2,40.4L30.1,39.0L45.8,24.0L65.9,21.8L73.0,27.2L82.3,26.8L86.8,24.7L82.5,20.7L87.8,19.5L92.0,20.4L91.0,25.2L129.6,24.4L131.4,23.0L121.5,18.6L131.3,14.0L160.6,10.5L142.8,7.6L131.3,0.0L459.0,0.0L476.0,3.0L491.1,0.0L526.8,0.0L540.6,2.3L549.8,0.0L668.6,1.3ZM121.2,1.0L116.5,0.0L126.2,0.0L121.2,1.0ZM89.6,0.4L86.9,0.0L90.4,0.0L89.6,0.4ZM73.9,1.1L65.0,12.5L47.0,20.1L26.0,37.0L27.9,27.4L47.7,14.9L22.4,15.5L19.9,10.9L31.6,0.0L80.0,0.0L73.9,1.1Z"},"SYR":{"name":"سوريا","d":"M386.8,203.6L393.7,206.6L395.5,202.5L400.9,199.9L401.9,193.2L411.6,190.6L407.9,181.7L412.4,167.9L422.8,169.7L427.4,173.9L441.1,174.3L469.0,163.9L478.3,165.5L490.3,172.3L512.1,172.7L536.5,167.0L561.9,156.1L591.9,156.4L612.0,151.8L617.3,148.1L621.3,150.8L623.0,155.7L601.9,176.1L588.2,179.4L583.7,184.7L581.9,197.1L585.9,214.4L580.8,228.5L580.0,249.2L572.3,262.8L561.3,266.7L490.5,305.1L418.3,347.3L401.8,344.5L380.2,330.6L383.9,322.2L380.4,306.6L389.3,296.6L385.9,293.3L386.9,290.7L391.4,286.7L401.5,286.4L398.3,283.0L409.6,271.2L406.7,262.7L400.2,260.0L404.0,255.5L402.2,253.7L387.2,254.8L383.9,242.1L385.9,231.0L384.4,223.2L379.3,217.1L382.1,206.0L386.8,203.6Z"},"SSD":{"name":"جنوب السودان","d":"M361.0,1420.3L295.2,1489.8L282.9,1489.0L277.1,1484.8L252.6,1491.8L245.2,1499.2L238.1,1495.7L232.7,1487.9L223.5,1492.9L208.9,1488.6L200.6,1494.6L197.3,1500.4L194.3,1495.0L188.0,1495.0L185.1,1486.6L173.5,1480.7L154.4,1456.5L149.7,1454.6L137.7,1464.3L119.3,1459.8L106.0,1467.3L99.5,1466.0L86.5,1456.1L64.9,1428.4L63.9,1417.5L60.8,1411.1L45.3,1400.1L37.5,1397.2L29.9,1381.8L31.8,1374.6L14.4,1357.4L0.0,1349.4L0.0,1225.6L13.2,1223.7L14.5,1231.9L38.9,1259.0L46.7,1260.0L58.2,1255.4L88.0,1255.9L94.2,1266.9L123.6,1267.0L123.4,1261.6L128.6,1256.2L146.8,1249.3L151.7,1243.1L151.7,1237.4L166.4,1228.9L194.2,1250.8L209.0,1249.2L227.5,1231.2L237.7,1213.5L255.8,1196.4L252.7,1187.4L252.7,1171.6L242.9,1159.7L267.4,1159.6L266.9,1151.1L284.5,1151.3L279.9,1175.8L283.5,1206.0L282.0,1210.2L290.9,1213.9L310.7,1232.7L312.8,1245.5L309.4,1259.8L317.0,1261.5L317.9,1292.9L316.8,1298.2L312.4,1302.3L287.6,1302.5L277.1,1324.0L285.5,1329.6L301.8,1333.2L310.5,1339.6L316.5,1351.0L340.4,1373.6L350.5,1405.7L361.0,1420.3Z"},"SDN":{"name":"السودان","d":"M317.0,1261.5L309.4,1259.8L312.8,1245.5L310.7,1232.7L290.9,1213.9L282.0,1210.2L283.5,1206.0L279.9,1175.8L284.5,1151.3L266.9,1151.1L267.4,1159.6L242.9,1159.7L252.7,1171.6L252.7,1187.4L255.8,1196.4L237.7,1213.5L227.5,1231.2L209.0,1249.2L194.2,1250.8L166.4,1228.9L151.7,1237.4L151.7,1243.1L146.8,1249.3L128.6,1256.2L123.4,1261.6L123.6,1267.0L94.2,1266.9L88.0,1255.9L58.2,1255.4L46.7,1260.0L38.9,1259.0L14.5,1231.9L13.2,1223.7L0.0,1225.6L0.0,760.2L211.0,760.2L218.0,751.9L221.2,754.1L219.3,760.2L420.2,760.1L422.3,776.5L434.5,795.7L434.5,798.4L430.5,795.8L430.2,800.7L433.4,817.7L432.1,835.2L434.2,856.7L442.4,887.2L452.0,892.2L469.4,910.0L472.4,908.5L484.5,919.8L471.3,936.6L453.9,941.7L445.2,947.0L440.2,957.5L425.3,957.6L424.2,968.0L420.8,975.0L421.8,988.2L407.3,1030.0L403.8,1034.7L407.4,1069.7L402.5,1095.0L393.9,1116.3L392.7,1129.7L375.8,1135.1L355.2,1167.3L349.6,1188.9L348.5,1205.4L342.6,1210.2L335.3,1204.8L326.8,1213.7L324.3,1218.9L325.6,1232.4L320.0,1245.9L317.0,1261.5Z"},"SOM":{"name":"الصومال","d":"M577.9,1520.0L610.7,1474.5L639.0,1468.3L651.4,1454.2L668.3,1445.8L683.3,1442.0L718.4,1443.5L773.2,1380.1L830.7,1320.1L866.2,1261.9L866.2,1189.7L909.5,1178.8L922.6,1170.9L928.9,1162.2L934.7,1160.7L951.8,1166.8L945.5,1186.6L947.6,1213.7L943.5,1222.2L949.3,1220.8L949.5,1217.8L956.0,1221.0L956.6,1224.5L950.1,1222.8L939.8,1226.6L935.9,1262.9L921.3,1286.2L909.2,1312.0L899.9,1321.5L893.3,1341.2L877.1,1368.9L870.3,1393.1L855.5,1420.2L840.1,1441.9L830.6,1460.1L779.3,1520.0L577.9,1520.0Z"},"PAK":{"name":"باكستان","d":"M1644.5,535.1L1628.5,553.0L1624.9,567.8L1634.7,574.9L1644.5,576.7L1644.5,672.5L1634.0,673.1L1628.2,669.1L1601.2,669.4L1599.5,667.5L1597.5,669.4L1597.4,681.4L1581.0,682.9L1574.9,689.9L1572.0,686.1L1568.8,686.9L1565.4,683.9L1563.9,686.9L1558.3,687.6L1557.5,683.2L1554.4,684.7L1545.1,673.0L1540.0,649.8L1522.7,645.6L1522.5,630.9L1516.4,620.6L1508.7,615.9L1504.8,616.4L1501.5,620.3L1509.9,619.7L1514.0,622.2L1451.5,627.7L1447.1,632.6L1425.0,623.9L1420.4,626.3L1406.4,625.9L1404.0,631.6L1373.4,629.4L1360.5,634.6L1356.2,631.0L1352.2,633.8L1339.4,634.5L1332.9,632.5L1336.4,609.9L1339.8,606.3L1343.0,591.0L1353.5,585.2L1357.7,585.7L1360.4,580.4L1365.1,577.6L1391.7,574.0L1397.0,553.9L1392.0,549.9L1377.1,550.0L1378.9,540.1L1376.9,510.3L1369.7,510.6L1361.9,503.4L1344.8,498.1L1334.9,488.3L1323.7,465.1L1306.1,445.7L1366.5,463.7L1406.8,460.1L1426.4,464.3L1437.3,458.2L1463.3,457.6L1503.2,446.6L1508.3,441.3L1505.5,435.6L1508.0,427.2L1507.3,415.7L1511.4,403.5L1530.8,387.8L1544.3,391.3L1560.9,386.2L1555.0,379.7L1571.2,372.9L1576.5,367.9L1587.0,369.8L1592.7,367.9L1599.5,374.1L1606.6,373.3L1617.9,362.5L1616.5,342.7L1622.5,332.7L1626.1,319.2L1644.5,313.9L1644.5,535.1ZM1639.6,284.1L1640.4,279.7L1644.5,278.0L1644.5,289.1L1639.6,284.1Z"},"LBY":{"name":"ليبيا","d":""},"LBN":{"name":"لبنان","d":"M387.2,254.8L399.0,252.9L404.0,255.5L400.2,260.0L406.7,262.7L409.6,271.2L398.3,283.0L401.5,286.4L388.7,288.6L385.9,293.3L388.9,297.5L373.4,310.4L370.8,310.0L369.3,315.2L355.1,316.7L373.7,278.7L375.0,270.1L387.2,258.1L387.2,254.8Z"},"JOR":{"name":"الأردن","d":"M384.1,331.4L390.2,338.6L401.8,344.5L418.3,347.3L490.5,305.1L501.0,340.3L498.2,341.1L500.4,347.8L508.0,346.0L509.7,350.2L497.5,360.2L423.5,380.3L461.2,420.0L449.0,426.8L442.3,440.2L415.9,445.4L405.6,460.2L388.6,472.4L349.3,465.9L356.3,434.3L356.3,423.2L367.3,394.7L365.9,390.8L371.7,369.4L372.2,334.4L378.2,330.8L384.1,331.4Z"},"ISR":{"name":"إسرائيل","d":"M382.1,303.4L380.1,308.4L383.9,322.2L380.2,330.6L372.2,334.4L371.5,344.2L358.2,338.6L353.5,341.6L349.4,353.6L349.6,367.1L355.8,367.3L358.6,370.0L349.3,375.9L346.7,385.3L354.8,385.4L367.7,380.8L365.9,390.8L367.3,394.7L356.3,423.2L356.3,434.3L347.5,460.9L323.2,391.7L333.5,379.0L331.8,376.6L339.2,364.2L355.1,316.7L366.3,317.0L369.3,315.2L370.8,310.0L373.4,310.4L382.1,303.4Z"},"PSE":{"name":"فلسطين","d":"M333.5,378.3L327.0,388.3L323.2,391.7L321.4,387.1L331.8,376.6L333.5,378.3ZM371.5,344.2L371.7,369.4L367.7,380.8L354.8,385.4L346.7,385.3L349.3,375.9L358.6,370.0L349.4,366.3L349.4,353.6L353.5,341.6L358.2,338.6L364.5,339.7L371.5,344.2Z"},"IRQ":{"name":"العراق","d":"M623.0,155.7L638.4,145.1L644.4,147.0L650.1,145.3L671.7,150.9L687.9,147.9L690.8,150.0L691.1,157.9L694.1,160.9L706.1,153.0L710.7,153.4L716.2,168.0L721.3,172.1L722.6,181.1L729.5,185.8L734.0,199.4L741.4,200.9L749.3,207.1L767.7,209.1L757.4,215.7L756.7,220.9L761.7,227.1L762.5,234.9L754.7,238.9L745.7,248.1L744.2,257.0L739.1,256.7L736.8,263.4L740.7,271.4L735.3,281.2L747.9,295.9L753.1,295.6L752.9,300.3L758.3,303.4L763.0,310.8L760.6,316.5L761.7,321.7L771.5,322.8L799.0,341.3L808.3,343.1L813.5,354.0L825.2,368.2L819.6,384.0L819.6,399.9L831.9,400.4L832.0,421.4L843.7,428.6L847.6,438.5L851.7,441.5L844.6,441.7L836.7,438.4L830.7,440.7L819.4,436.2L802.8,438.3L798.8,441.5L786.0,466.1L777.2,476.2L770.8,477.5L710.1,472.3L612.5,396.8L549.5,362.4L504.3,355.0L509.7,350.2L508.0,346.0L500.4,347.8L498.2,341.1L501.0,340.3L490.5,305.1L561.3,266.7L572.3,262.8L580.0,249.2L580.8,228.5L585.9,214.4L581.9,197.1L583.7,184.7L588.2,179.4L601.9,176.1L623.0,155.7Z"},"IRN":{"name":"إيران","d":"M1137.5,561.9L1125.4,572.0L1121.5,570.8L1105.8,576.7L1101.1,574.4L1118.4,567.5L1118.2,562.1L1123.7,563.6L1135.0,559.9L1137.5,561.9ZM1060.3,146.7L1079.1,141.2L1086.5,128.9L1104.3,118.0L1111.6,116.0L1137.2,116.8L1139.1,112.4L1143.4,110.0L1171.2,111.3L1175.5,114.8L1177.2,121.1L1200.3,126.8L1210.7,133.4L1231.2,132.7L1249.2,139.6L1254.8,149.9L1277.3,161.5L1287.6,174.5L1316.3,174.3L1318.2,177.1L1319.8,196.0L1317.6,200.9L1321.2,205.3L1322.2,219.4L1318.9,227.5L1315.6,229.1L1317.4,236.2L1314.9,245.8L1310.1,253.8L1301.8,259.3L1307.8,267.2L1298.7,267.7L1292.9,276.2L1294.4,286.3L1292.9,291.5L1296.2,296.5L1308.8,299.8L1295.7,314.5L1305.6,350.0L1305.3,380.2L1336.3,384.7L1339.8,388.6L1341.9,403.5L1306.1,445.7L1323.7,465.1L1334.9,488.3L1344.8,498.1L1361.9,503.4L1369.7,510.6L1376.9,510.3L1378.9,540.1L1376.7,549.4L1382.7,551.3L1392.0,549.9L1397.1,555.0L1394.8,556.9L1395.1,564.8L1392.7,566.5L1391.7,574.0L1365.1,577.6L1360.4,580.4L1357.7,585.7L1353.5,585.2L1343.0,591.0L1339.8,606.3L1336.4,609.9L1333.6,631.9L1327.1,635.9L1299.5,628.7L1293.8,622.5L1289.7,627.5L1260.8,623.9L1254.9,620.7L1239.7,623.3L1230.5,617.8L1208.5,616.3L1198.7,612.3L1193.5,613.9L1191.2,611.0L1176.5,608.3L1171.7,598.5L1163.4,563.8L1157.2,556.4L1140.3,552.0L1114.2,560.9L1105.8,569.2L1101.0,568.6L1081.3,579.8L1062.4,572.1L1042.3,571.0L1033.1,562.3L1004.9,547.1L996.9,535.3L980.4,527.0L964.1,525.4L952.7,514.7L945.8,499.5L944.6,491.0L937.4,485.2L937.8,477.5L930.4,474.1L929.4,463.2L911.6,443.2L908.0,432.1L889.0,438.8L868.5,425.0L875.5,425.0L877.6,423.5L876.7,421.1L868.5,419.7L869.8,422.0L864.4,426.9L865.5,435.2L863.6,437.5L851.7,441.5L847.6,438.5L843.7,428.6L832.0,421.4L831.9,400.4L819.6,399.9L819.6,384.0L825.2,368.2L813.5,354.0L808.3,343.1L799.0,341.3L771.5,322.8L761.7,321.7L760.6,316.5L763.0,310.8L758.3,303.4L752.9,300.3L753.1,295.6L747.9,295.9L735.3,281.2L740.7,271.4L736.8,263.4L739.1,256.7L744.2,257.0L745.7,248.1L754.7,238.9L762.5,234.9L761.7,227.1L756.7,220.9L757.4,215.7L767.7,209.1L749.3,207.1L741.4,200.9L734.0,199.4L729.5,185.8L722.6,181.1L721.3,172.1L716.2,168.0L712.0,154.6L713.0,148.4L704.9,142.6L703.8,133.7L705.5,131.6L691.5,123.7L700.3,106.6L694.7,104.5L693.7,86.6L690.0,82.6L690.2,74.2L686.6,71.3L684.5,64.9L698.1,63.1L700.5,53.3L705.4,49.3L713.9,54.0L725.8,69.8L738.4,79.7L763.9,85.2L778.1,83.8L807.0,63.0L823.1,54.1L831.3,52.6L843.4,64.0L835.3,70.4L842.3,79.2L833.3,82.6L831.4,85.8L853.4,103.6L863.6,102.6L865.7,119.4L871.4,133.3L882.2,139.2L910.2,143.7L925.1,159.5L946.7,170.3L970.5,175.4L986.3,175.1L1044.6,162.8L1050.1,162.8L1041.4,165.9L1052.1,167.3L1054.1,163.9L1050.1,146.3L1060.3,146.7Z"},"GRC":{"name":"اليونان","d":"M86.4,178.5L84.5,175.7L87.3,174.4L87.5,176.7L86.4,178.5ZM60.5,223.6L58.0,216.1L63.7,207.2L61.2,214.8L64.1,220.9L60.5,223.6ZM52.5,162.2L53.1,159.0L51.3,156.5L56.9,159.9L52.5,162.2ZM52.4,171.0L63.4,164.1L68.4,165.2L61.0,168.9L52.4,171.0ZM0.0,162.1L0.0,152.9L0.9,152.1L3.2,153.9L3.1,158.4L0.0,162.1ZM45.9,127.6L56.9,129.2L57.5,131.6L49.7,134.2L40.0,131.1L45.9,127.6ZM17.8,139.0L21.7,134.6L31.5,133.0L26.0,137.3L17.8,139.0ZM10.0,168.7L18.5,162.5L20.9,163.9L13.3,168.4L10.0,168.7ZM35.5,176.6L30.7,179.5L28.4,176.2L30.9,176.8L32.2,174.5L35.5,176.6ZM18.4,113.5L13.8,109.2L18.2,105.9L12.8,97.0L18.9,95.9L24.4,98.4L24.3,107.9L18.4,113.5ZM31.3,64.7L39.8,75.6L40.1,78.7L36.5,77.0L38.7,80.2L24.4,79.0L22.5,76.8L28.6,72.1L25.0,72.2L21.2,76.2L12.7,72.0L15.1,68.5L21.7,67.8L24.6,65.1L31.3,64.7ZM6.9,22.9L0.0,22.1L0.0,20.1L2.5,19.4L6.9,22.9ZM83.9,203.7L81.9,201.7L83.4,197.2L81.9,193.1L89.2,186.2L101.0,182.7L94.9,194.8L95.6,197.4L83.9,203.7ZM0.0,227.5L9.5,226.9L8.7,232.6L10.8,235.1L24.7,231.4L30.3,227.4L27.5,238.2L0.0,240.2L0.0,227.5ZM31.6,0.1L19.9,10.9L13.1,6.2L0.0,4.5L0.0,0.0L31.6,0.1Z"},"ETH":{"name":"إثيوبيا","d":"M363.1,1425.4L350.5,1405.7L340.4,1373.6L316.5,1351.0L310.5,1339.6L301.8,1333.2L280.1,1327.1L277.6,1321.9L287.6,1302.5L312.4,1302.3L317.6,1296.7L317.0,1259.5L325.6,1232.4L324.3,1218.9L330.1,1208.5L335.3,1204.8L342.6,1210.2L348.5,1205.4L349.6,1188.9L355.2,1167.3L375.8,1135.1L392.0,1130.9L393.9,1116.3L402.5,1095.0L407.4,1069.7L418.0,1067.4L425.9,1069.1L434.5,1061.8L446.1,1074.0L457.7,1045.9L470.1,1054.0L477.9,1062.9L491.9,1060.7L501.6,1054.9L506.2,1060.8L518.5,1058.5L532.0,1062.4L541.0,1061.8L566.2,1075.5L586.2,1100.0L601.1,1112.6L608.0,1124.7L614.7,1129.1L623.7,1141.3L602.1,1172.6L602.3,1200.8L608.2,1202.4L630.4,1196.8L643.9,1200.0L634.0,1216.0L640.9,1231.9L649.3,1243.0L653.4,1244.8L664.5,1264.8L669.6,1266.5L683.1,1279.6L793.7,1320.1L830.7,1320.1L773.2,1380.1L718.4,1443.5L683.3,1442.0L668.3,1445.8L651.4,1454.2L641.4,1467.0L610.7,1474.5L605.5,1480.9L578.0,1481.5L564.1,1469.1L530.0,1485.9L523.2,1496.9L517.2,1501.8L465.1,1494.0L421.5,1463.5L388.8,1461.3L379.3,1447.7L380.6,1433.7L378.6,1426.2L368.4,1423.2L363.1,1425.4Z"},"ERI":{"name":"إريتريا","d":"M407.4,1069.7L403.8,1034.7L407.3,1030.0L421.8,988.2L420.8,975.0L424.2,968.0L425.3,957.6L440.2,957.5L445.2,947.0L453.9,941.7L471.3,936.6L484.5,919.8L500.2,956.6L509.9,1003.2L527.9,1035.0L530.8,1021.2L537.4,1026.6L539.0,1033.9L543.4,1039.4L556.0,1042.7L565.4,1050.3L579.3,1055.2L597.1,1080.7L618.8,1096.5L624.5,1111.5L629.1,1111.1L636.9,1119.3L639.2,1125.4L645.6,1127.7L646.7,1124.0L651.0,1131.7L641.8,1135.1L635.8,1144.8L627.5,1139.5L623.7,1141.3L614.7,1129.1L608.0,1124.7L601.1,1112.6L586.2,1100.0L566.2,1075.5L541.0,1061.8L532.0,1062.4L518.5,1058.5L506.2,1060.8L499.8,1054.9L491.9,1060.7L477.9,1062.9L470.1,1054.0L457.7,1045.9L445.2,1074.2L434.5,1061.8L425.9,1069.1L418.0,1067.4L407.4,1069.7ZM539.9,1000.6L535.7,998.3L537.6,995.8L538.7,996.7L539.9,1000.6ZM542.6,1014.3L545.1,1011.9L550.9,1014.8L550.6,1016.8L534.9,1015.5L533.9,1012.2L538.5,1012.9L533.6,1010.2L535.9,1006.9L534.3,1004.4L539.4,1006.5L542.6,1014.3Z"},"EGY":{"name":"مصر","d":"M420.2,760.1L219.3,760.2L221.2,754.1L218.0,751.9L211.0,760.2L0.0,760.2L0.0,378.5L14.5,375.2L64.6,384.9L75.4,391.5L86.1,392.2L91.2,396.1L111.4,398.0L132.0,406.8L145.2,402.9L163.7,390.9L174.5,389.7L180.9,381.7L200.4,377.3L187.1,383.3L203.3,381.5L206.3,375.9L222.6,381.7L236.1,378.3L245.2,386.4L236.2,380.7L231.7,388.3L240.5,391.2L244.0,396.3L250.6,392.0L248.2,388.2L262.5,397.2L282.0,393.3L284.3,396.6L301.8,394.8L321.4,387.1L347.5,460.9L341.3,469.2L336.9,489.7L330.6,505.7L328.9,519.4L322.3,529.4L305.3,518.1L286.3,497.3L282.0,480.9L266.9,459.1L261.1,441.0L257.7,443.0L258.3,445.9L253.5,454.8L262.3,467.1L263.6,480.3L273.4,497.4L297.4,524.1L297.5,535.7L308.6,552.6L312.6,574.0L335.0,612.4L358.2,661.0L368.7,673.8L380.0,682.5L371.1,683.2L369.7,688.8L370.4,702.3L376.9,722.2L384.8,730.4L396.5,734.8L403.3,744.2L418.7,756.1L420.2,760.1Z"},"DJI":{"name":"جيبوتي","d":"M655.8,1180.0L643.9,1200.0L630.4,1196.8L608.2,1202.4L602.3,1200.8L602.1,1172.6L623.7,1141.3L627.5,1139.5L635.8,1144.8L641.8,1135.1L651.0,1131.7L659.8,1145.3L660.8,1156.3L648.5,1166.8L639.3,1170.4L633.4,1177.6L629.0,1177.1L631.3,1180.1L643.4,1176.5L652.7,1177.4L655.8,1180.0Z"},"CYP":{"name":"قبرص","d":"M264.3,232.7L274.2,236.5L284.2,233.1L291.3,233.5L294.7,240.0L309.2,236.3L314.3,237.4L316.0,240.5L303.0,241.2L292.5,250.0L281.4,252.2L277.5,257.2L275.0,257.0L272.3,253.6L256.8,250.8L251.9,241.9L251.3,236.7L254.7,238.0L264.3,232.7Z"},"AFG":{"name":"أفغانستان","d":"M1514.1,146.2L1536.2,146.6L1545.5,151.6L1552.8,149.3L1559.5,150.9L1564.5,157.4L1573.1,162.0L1604.3,146.6L1618.8,155.3L1622.9,151.7L1622.3,144.0L1625.7,137.9L1637.9,135.6L1644.5,137.5L1644.5,278.0L1640.4,279.7L1639.6,284.1L1644.5,289.1L1644.5,313.9L1626.1,319.2L1622.5,332.7L1616.5,342.7L1617.9,362.5L1610.6,370.5L1602.7,374.6L1592.7,367.9L1587.0,369.8L1576.5,367.9L1571.2,372.9L1555.0,379.7L1560.9,386.2L1550.4,390.6L1530.8,387.8L1527.3,389.5L1518.7,399.2L1511.4,403.5L1509.5,407.9L1505.5,435.6L1507.3,443.2L1503.2,446.6L1466.4,456.9L1437.3,458.2L1426.4,464.3L1406.8,460.1L1366.5,463.7L1306.1,445.7L1341.9,403.5L1339.8,388.6L1336.3,384.7L1305.3,380.2L1305.6,350.0L1295.7,317.6L1295.7,314.5L1308.8,299.8L1293.8,294.4L1292.9,276.2L1298.7,267.7L1307.8,267.2L1301.8,259.3L1310.1,253.8L1314.9,245.8L1317.4,236.2L1315.6,229.1L1318.9,227.5L1322.2,219.4L1321.6,215.2L1324.6,214.8L1334.9,222.7L1348.3,222.3L1360.2,233.2L1366.0,229.9L1374.3,229.8L1387.9,222.2L1392.1,212.9L1390.6,206.2L1423.1,199.5L1441.7,186.4L1452.9,154.7L1463.0,150.5L1480.2,150.0L1483.4,141.3L1488.0,137.2L1500.7,143.4L1514.1,146.2Z"}},"water":{"arabian":"M956.7,1223.6L956.0,1221.0L949.5,1217.8L949.3,1220.8L943.5,1222.2L945.8,1220.5L947.6,1213.7L945.5,1186.6L952.2,1166.8L952.0,1031.6L987.4,1013.8L985.7,1001.7L988.1,993.1L991.4,988.3L1000.8,981.2L1027.3,971.1L1038.8,969.6L1055.7,959.8L1074.2,958.7L1081.8,961.4L1092.5,958.5L1100.4,947.2L1099.6,936.6L1107.9,926.3L1141.3,920.5L1147.5,913.4L1151.3,896.5L1157.6,889.9L1170.6,883.9L1189.1,881.7L1194.1,879.3L1225.0,831.7L1229.6,829.3L1231.9,823.0L1236.2,819.3L1233.7,812.8L1224.7,826.5L1218.8,823.3L1234.2,795.5L1251.7,780.0L1267.6,751.2L1268.7,741.5L1326.9,635.9L1331.6,632.2L1345.5,634.8L1352.2,633.8L1356.2,631.0L1360.5,634.6L1373.4,629.4L1404.0,631.6L1404.1,628.1L1406.4,625.9L1412.5,624.6L1420.4,626.3L1425.0,623.9L1428.4,626.7L1447.1,632.6L1451.5,627.7L1474.7,625.0L1484.9,625.8L1505.4,621.4L1514.0,622.2L1509.9,619.7L1501.5,620.3L1504.8,616.4L1508.7,615.9L1516.4,620.6L1522.5,630.9L1522.7,645.6L1540.0,649.8L1545.1,673.0L1554.4,684.7L1557.5,683.2L1558.3,687.6L1563.9,686.9L1565.4,683.9L1568.8,686.9L1572.0,686.1L1574.9,689.9L1576.7,685.7L1579.3,696.1L1599.3,685.9L1586.0,697.2L1594.3,712.4L1600.2,717.4L1608.1,743.7L1606.4,748.4L1607.9,752.1L1644.5,791.3L1644.5,1520.0L1493.3,1520.0L956.7,1223.6ZM1038.4,1146.3L1058.0,1145.6L1072.1,1137.9L1060.1,1133.4L1046.8,1135.0L1036.0,1131.4L1027.9,1138.7L1038.4,1146.3Z","red":"M664.3,1126.4L664.8,1132.0L657.8,1141.5L646.7,1124.0L645.6,1127.7L639.2,1125.4L636.9,1119.3L629.1,1111.1L624.5,1111.5L618.8,1096.5L597.1,1080.7L579.3,1055.2L565.4,1050.3L556.0,1042.7L543.4,1039.4L539.0,1033.9L537.4,1026.6L530.8,1021.2L528.1,1027.2L529.2,1031.9L527.9,1035.0L522.2,1021.9L520.3,1019.1L517.6,1018.7L514.5,1008.5L509.9,1003.2L500.2,956.6L495.6,942.9L483.1,917.1L472.4,908.5L469.4,910.0L459.0,897.8L442.4,887.2L434.2,856.7L434.7,848.3L432.1,835.2L433.4,817.7L430.2,800.7L430.6,795.8L434.5,798.4L434.5,795.7L422.3,776.5L420.2,759.4L418.7,756.1L403.4,744.2L396.5,734.8L384.8,730.4L376.9,722.1L370.4,702.3L369.7,688.8L371.1,683.2L380.0,682.5L368.7,673.8L358.2,661.0L335.0,612.4L312.6,574.0L307.8,551.1L314.1,539.0L328.5,520.0L332.8,520.2L335.8,516.6L337.2,517.4L340.8,514.8L354.0,516.5L357.8,518.6L366.7,530.7L372.6,542.7L379.3,549.6L382.5,557.2L397.3,576.2L407.2,595.8L413.0,598.5L416.2,609.9L422.1,614.3L430.5,628.4L434.8,641.6L431.7,647.2L445.0,668.3L459.0,672.6L472.6,683.6L479.1,691.5L488.0,707.8L491.4,718.1L496.7,724.7L494.6,724.7L499.2,729.2L501.2,736.3L502.4,744.3L498.5,764.7L504.3,779.2L502.3,787.6L509.1,801.0L525.8,824.4L531.6,828.3L538.8,829.4L553.7,840.3L558.6,847.1L563.9,849.8L577.1,876.7L581.3,892.9L588.8,901.9L597.1,919.7L620.6,942.6L623.9,955.1L635.6,970.5L638.9,981.9L640.8,998.7L636.3,1013.8L639.3,1026.9L638.9,1029.4L635.6,1026.9L634.1,1030.7L641.4,1034.7L644.4,1042.5L643.8,1047.3L650.2,1071.8L650.0,1079.6L655.4,1085.6L657.1,1092.3L655.3,1109.3L664.3,1126.4ZM608.4,973.9L612.4,973.1L615.6,977.2L616.1,971.7L612.0,967.9L610.7,969.7L612.2,971.6L607.8,970.1L607.8,962.5L604.6,959.9L604.5,964.3L601.5,966.1L608.4,973.9ZM538.5,1012.9L533.9,1012.2L534.9,1015.5L550.6,1016.8L550.9,1014.8L545.1,1011.9L542.6,1014.3L539.4,1006.5L534.3,1004.4L535.9,1006.9L533.6,1010.2L538.5,1012.9Z","gulf":"M1171.6,596.0L1142.8,588.9L1141.1,585.8L1138.4,590.6L1133.2,591.7L1125.0,608.3L1109.5,620.1L1093.8,638.3L1080.8,647.6L1067.9,668.9L1058.7,673.1L1045.9,677.2L1003.3,673.8L988.6,680.2L975.8,680.6L971.6,677.0L970.7,669.8L966.9,670.0L964.7,666.5L962.1,668.6L953.8,666.4L957.8,658.8L957.6,657.2L952.3,655.7L958.2,653.3L964.9,637.9L960.3,619.0L963.5,608.8L962.4,603.9L952.0,593.9L942.5,600.7L933.3,624.0L936.7,644.5L935.1,648.4L926.0,636.5L922.2,623.0L914.2,615.1L908.4,601.5L906.6,595.6L911.2,596.0L913.3,587.7L912.2,583.8L906.4,578.9L905.7,572.9L910.9,573.5L904.9,566.8L894.9,561.8L888.3,553.9L883.4,552.8L874.9,542.5L877.2,540.3L865.0,534.8L861.0,531.0L862.3,528.0L861.4,524.2L854.6,514.7L844.0,489.5L838.3,480.8L833.4,465.8L821.3,463.3L830.4,455.3L836.8,457.1L831.7,446.6L830.8,439.6L836.7,438.4L848.3,442.5L856.3,438.9L862.2,438.6L865.5,435.2L864.4,426.9L865.4,424.1L869.8,422.0L868.5,419.7L876.7,421.1L877.6,423.5L875.5,425.0L872.0,423.7L868.5,425.1L889.0,438.8L904.8,431.6L908.0,432.1L911.6,443.2L929.4,463.2L930.4,474.1L937.8,477.5L937.4,485.2L944.7,491.0L945.8,499.5L952.6,511.2L952.7,514.7L964.1,525.4L980.5,527.0L996.9,535.3L1004.9,547.1L1015.6,554.3L1033.1,562.3L1035.0,565.9L1042.4,571.0L1062.4,572.1L1077.1,579.6L1086.3,577.7L1101.1,568.6L1105.8,569.2L1114.2,560.9L1125.0,558.5L1131.5,554.3L1140.3,552.0L1154.1,554.9L1160.8,560.2L1165.4,568.0L1167.9,585.1L1171.5,593.6L1171.6,596.0ZM1121.5,570.8L1125.4,571.9L1134.1,563.1L1137.4,561.9L1135.0,559.9L1123.7,563.6L1118.2,562.1L1118.4,567.5L1101.1,574.4L1101.7,576.3L1105.8,576.7L1121.5,570.8ZM922.8,590.9L922.6,601.4L926.6,607.7L928.2,599.9L926.0,592.1L927.1,590.4L922.8,590.9ZM838.3,440.8L834.5,448.0L839.6,455.9L844.1,452.2L844.4,448.7L838.3,440.8Z","aden":"M952.2,1032.5L952.2,1166.8L934.7,1160.7L928.9,1162.2L922.6,1170.9L909.5,1178.8L892.2,1182.0L870.7,1189.2L864.9,1189.8L852.6,1187.2L832.2,1194.4L820.9,1195.5L809.5,1193.0L778.5,1210.2L750.8,1206.6L718.5,1222.5L698.0,1222.8L694.0,1221.1L678.2,1208.6L670.0,1198.6L663.0,1186.1L652.7,1177.4L643.4,1176.5L629.7,1179.8L629.0,1177.1L633.4,1177.6L639.3,1170.4L648.5,1166.8L659.2,1158.9L661.9,1152.4L657.8,1141.5L664.8,1132.0L670.2,1130.2L683.9,1135.7L696.9,1133.2L706.5,1127.3L711.6,1129.5L722.1,1127.4L726.7,1120.1L735.2,1117.3L744.9,1106.5L786.7,1101.4L809.6,1093.5L818.0,1085.7L831.1,1078.1L841.8,1080.1L856.2,1078.0L865.8,1069.3L870.2,1061.7L881.4,1054.5L901.9,1046.9L911.6,1046.0L924.9,1038.5L952.2,1032.5Z","oman":"M1326.7,636.7L1268.7,741.5L1268.4,739.6L1257.8,736.9L1253.9,733.6L1239.1,714.8L1229.6,699.3L1222.4,694.3L1213.0,695.1L1205.5,691.3L1186.7,687.9L1172.2,683.1L1160.9,674.0L1145.2,651.3L1140.9,639.3L1140.6,617.2L1138.1,614.0L1140.9,607.8L1142.8,588.9L1171.6,596.0L1176.5,608.3L1191.2,611.0L1193.5,613.9L1198.7,612.3L1208.5,616.3L1230.5,617.8L1239.7,623.3L1254.9,620.7L1260.8,623.9L1289.7,627.5L1293.8,622.5L1296.7,623.5L1299.5,628.7L1326.7,636.7Z"}}</script>
+<script type="application/json" id="meta-data">{"updated":"28 أكتوبر 2026","sources":["حدود الدول والمسطحات المائية: Natural Earth (بيانات مجال عام) بدقة 1:50 مليون، بعد تبسيطها وإسقاطها داخل الملف — naturalearthdata.com","السكان (دول الخليج الست): الإحصاءات الوطنية الرسمية كما جمعها برنامج GLMM التابع لمركز الخليج للأبحاث، منتصف 2024 (الكويت: نهاية 2024) — gulfmigration.grc.net","السكان (اليمن): الأمم المتحدة، توقعات سكان العالم تنقيح 2024، تقدير 2025 (تقدير وليس تعدادًا)","المساحات: أرقام تقريبية متداولة في المراجع الجغرافية العامة.","الحكام ونظام الحكم: معلومات متاحة حتى أكتوبر 2026؛ وللتحقق منها يُراجع الموقع الرسمي لكل دولة.","الأعلام: رسوم SVG مبسّطة مضمَّنة في الملف، وقد تختلف تفاصيلها الدقيقة عن الشعارات الرسمية.","الملف يعمل بالكامل دون اتصال بالإنترنت، ولا يعتمد على أي مكتبة أو خادم خرائط خارجي."],"disclaimer":"المضيقان والخليجان الصغيران (هرمز، باب المندب، العقبة، السويس) تُعرض مواضعها تقريبيًا لأغراض التعليم."}</script>
+
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const J=id=>JSON.parse(document.getElementById(id).textContent);
+const GEO=J('geo-data'), COUNTRIES=J('countries-data'), WATERS=J('waters-data'), META=J('meta-data');
+const NS='http://www.w3.org/2000/svg';
+const PR=GEO.proj;
+const proj=(lon,lat)=>[(lon-PR.lon0)*PR.k*PR.cx,(PR.lat0-lat)*PR.k];
+const BOUNDS={w:(70-25.5)*PR.k*PR.cx,h:(41-3)*PR.k};
+
+/* ---------- الأعلام (رسوم SVG مبسّطة مضمَّنة) ---------- */
+function zig(x0,x1,n,fromRight){ // حافة مسنّنة
+  const h=40/n,p=[fromRight?x1:x0,0];
+  for(let i=0;i<n;i++){p.push(fromRight?x0:x1,i*h+h/2);p.push(fromRight?x1:x0,(i+1)*h);}
+  return p;
+}
+function zigPoly(w,n,teeth){ // مضلّع أبيض بحافة مسنّنة على اليمين
+  const pts=['0,0'];
+  const h=40/n;
+  pts.push(w+',0');
+  for(let i=0;i<n;i++){pts.push((w-teeth)+','+(i*h+h/2));pts.push(w+','+((i+1)*h));}
+  pts.push('0,40');
+  return pts.join(' ');
+}
+const FLAGS={
+ sa:'<rect width="60" height="40" fill="#006C35"/><rect x="14" y="11" width="32" height="3.2" rx="1.6" fill="#fff"/><rect x="18" y="16.5" width="24" height="2.8" rx="1.4" fill="#fff"/><rect x="22" y="21.5" width="16" height="2.4" rx="1.2" fill="#fff"/><path d="M12 30.5h31l3-1.4v4.2l-3-1.4H12z" fill="#fff"/><rect x="42" y="28.6" width="6" height="5" rx="1.2" fill="#fff"/>',
+ ae:'<rect width="60" height="40" fill="#fff"/><rect y="0" x="15" width="45" height="13.34" fill="#00732F"/><rect y="26.66" x="15" width="45" height="13.34" fill="#000"/><rect width="15" height="40" fill="#EF3340"/>',
+ om:'<rect width="60" height="40" fill="#fff"/><rect y="13.33" width="60" height="13.34" fill="#DB161B"/><rect y="26.67" width="60" height="13.33" fill="#008000"/><rect width="15" height="40" fill="#DB161B"/><circle cx="7.5" cy="7.5" r="3.4" fill="none" stroke="#fff" stroke-width="1.1"/><path d="M3.5 12.5l8-6M11.5 12.5l-8-6" stroke="#fff" stroke-width="1.1"/>',
+ qa:'<rect width="60" height="40" fill="#8A1538"/><polygon fill="#fff" points="'+zigPoly(18,9,6)+'"/>',
+ bh:'<rect width="60" height="40" fill="#CE1126"/><polygon fill="#fff" points="'+zigPoly(22,5,7)+'"/>',
+ kw:'<rect width="60" height="13.34" fill="#007A3D"/><rect y="13.33" width="60" height="13.34" fill="#fff"/><rect y="26.66" width="60" height="13.34" fill="#CE1126"/><polygon points="0,0 15,13.33 15,26.67 0,40" fill="#000"/>',
+ ye:'<rect width="60" height="13.34" fill="#CE1126"/><rect y="13.33" width="60" height="13.34" fill="#fff"/><rect y="26.66" width="60" height="13.34" fill="#000"/>',
+ water:'<rect width="60" height="40" fill="#cfe6f5"/><path d="M0 14q7.5-7 15 0t15 0 15 0 15 0M0 24q7.5-7 15 0t15 0 15 0 15 0M0 34q7.5-7 15 0t15 0 15 0 15 0" fill="none" stroke="#2a7ab9" stroke-width="2.6" stroke-linecap="round"/>'
+};
+const flagSvg=(id)=>'<svg xmlns="'+NS+'" viewBox="0 0 60 40" preserveAspectRatio="none">'+(FLAGS[id]||FLAGS.water)+'</svg>';
+
+/* ---------- ألوان اليابسة المحايدة ---------- */
+const LAND_FILL={sa:'#efe4c3',ye:'#e4d5ab',om:'#ecdfb8',ae:'#e1d0a2',qa:'#f2e9cf',bh:'#e8dab0',kw:'#e6d8b0'};
+
+/* ---------- بناء الـ SVG ---------- */
+const svg=$('#map'), wrap=$('#wrap'), tip=$('#tip');
+const mk=(n,a,p)=>{const e=document.createElementNS(NS,n);for(const k in (a||{}))if(a[k]!==null&&a[k]!==undefined)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;};
+const gBg=mk('g',{},svg), gW=mk('g',{id:'gW'},svg), gN=mk('g',{},svg), gC=mk('g',{id:'gC'},svg), gOv=mk('g',{},svg), gMk=mk('g',{},svg), gL=mk('g',{id:'gL'},svg);
+mk('rect',{x:-2000,y:-2000,width:BOUNDS.w+4000,height:BOUNDS.h+4000,fill:'#a9d3ec',id:'bgRect'},gBg);
+
+/* مسطحات مائية (مضلّعات حقيقية من Natural Earth + ممرات مرسومة) */
+const waterEl={}, markerEl={};
+WATERS.forEach(w=>{
+  let d=null;
+  if(w.geoKey && GEO.water[w.geoKey]) d=GEO.water[w.geoKey];
+  if(d){const p=mk('path',{d:d,class:'water','data-id':w.id},gW);waterEl[w.id]=p;}
+});
+/* الدول المجاورة */
+Object.keys(GEO.neighbors).forEach(k=>mk('path',{d:GEO.neighbors[k].d,class:'land-n'},gN));
+/* الدول السبع */
+const countryEl={}, ovEl={};
+COUNTRIES.forEach(c=>{
+  const p=mk('path',{d:GEO.countries[c.id],class:'land-c','data-id':c.id,fill:LAND_FILL[c.id]||'#eee'},gC);countryEl[c.id]=p;
+  ovEl[c.id]=mk('path',{d:GEO.countries[c.id],class:'ov'},gOv);
+});
+/* علامات المضائق والخلجان الصغيرة */
+WATERS.forEach(w=>{
+  if(!w.marker) return;
+  const [x,y]=proj(w.marker[0],w.marker[1]);
+  const g=mk('g',{transform:'translate('+x+','+y+')',class:'g-w'},gMk);
+  g.dataset.x=x;g.dataset.y=y;
+  const c=mk('circle',{r:10,class:'mk-ring','data-id':w.id},g);
+  mk('circle',{r:2.4,fill:'#0b3b66','pointer-events':'none'},g);
+  mk('circle',{r:26,class:'mk-halo'},g);
+  markerEl[w.id]={g:g,c:c};
+});
+
+/* ---------- التسميات (تُعاكس مقياس التكبير ليبقى حجم الخط ثابتًا) ---------- */
+const STAR='M0,-6.5 L1.9,-2 L6.5,-2 L2.8,0.9 L4.2,5.4 L0,2.7 L-4.2,5.4 L-2.8,0.9 L-6.5,-2 L-1.9,-2Z';
+const labelItems=[];
+function addLabel(o){
+  const [x,y]=proj(o.lon,o.lat);
+  const g=mk('g',{class:o.group},gL);
+  const inner=mk('g',{},g);
+  if(o.leader) mk('line',{x1:0,y1:0,x2:o.dx||0,y2:o.dy||0,class:'leader'+(o.group==='g-w'?' w':'')},inner);
+  if(o.star) mk('path',{d:STAR,class:'cap-star'},inner);
+  if(o.dot) mk('circle',{r:3.5,fill:'#555',stroke:'#fff','stroke-width':1.2},inner);
+  let t=null,flag=null;
+  if(o.text){
+    t=mk('text',{class:o.cls,'text-anchor':o.anchor||'middle',x:o.dx||0,y:o.dy||0,transform:o.rot?'rotate('+o.rot+' '+(o.dx||0)+' '+(o.dy||0)+')':null},inner);
+    t.textContent=o.text;
+  }
+  const it={g:g,x:x,y:y,t:t,flagEl:null,minK:o.minK||0};
+  if(o.flag){
+    flag=mk('g',{class:'lflag'},inner);
+    it.flagEl=flag;it.flagId=o.flag;
+  }
+  labelItems.push(it);
+  return it;
+}
+/* مواضع التسميات (خط الطول، خط العرض، إزاحة بالبكسل) — قابلة للتعديل بسهولة */
+const CL={ /* أسماء الدول */
+  sa:{lon:43.9,lat:24.9,text:'المملكة العربية السعودية',cls:'lbl-c'},
+  ye:{lon:47.6,lat:15.9,text:'الجمهورية اليمنية',cls:'lbl-c'},
+  om:{lon:57.5,lat:20.6,text:'سلطنة عُمان',cls:'lbl-c'},
+  ae:{lon:53.6,lat:23.4,text:'الإمارات',cls:'lbl-c sm'},
+  qa:{lon:51.25,lat:25.6,text:'قطر',cls:'lbl-c sm',leader:true,dx:24,dy:-50,anchor:'start'},
+  bh:{lon:50.55,lat:26.2,text:'البحرين',cls:'lbl-c sm',leader:true,dx:-30,dy:-34,anchor:'end'},
+  kw:{lon:47.6,lat:29.3,text:'الكويت',cls:'lbl-c sm',leader:true,dx:26,dy:-30,anchor:'start'}
+};
+COUNTRIES.forEach(c=>{
+  const o=CL[c.id];
+  const it=addLabel(Object.assign({group:'g-c',flag:c.id},o));
+  it.cid=c.id;
+});
+const CAPL={ /* العواصم */
+  sa:{lon:46.72,lat:24.71,text:'الرياض',dx:9,dy:4,anchor:'start'},
+  ae:{lon:54.37,lat:24.47,text:'أبوظبي',dx:9,dy:4,anchor:'start'},
+  om:{lon:58.59,lat:23.59,text:'مسقط',dx:-9,dy:4,anchor:'end'},
+  qa:{lon:51.53,lat:25.29,text:'الدوحة',dx:9,dy:4,anchor:'start'},
+  bh:{lon:50.58,lat:26.23,text:'المنامة',dx:-9,dy:5,anchor:'end'},
+  kw:{lon:47.98,lat:29.37,text:'مدينة الكويت',dx:9,dy:5,anchor:'start'},
+  ye:{lon:44.21,lat:15.35,text:'صنعاء',dx:-9,dy:4,anchor:'end'}
+};
+COUNTRIES.forEach(c=>addLabel(Object.assign({group:'g-cap',star:true,cls:'lbl-cap'},CAPL[c.id])));
+const WL={ /* المسطحات المائية */
+  gulf:{lon:54.0,lat:26.1,text:'الخليج العربي',cls:'lbl-w big',rot:20},
+  red:{lon:37.9,lat:20.1,text:'البحر الأحمر',cls:'lbl-w big',rot:58},
+  arab:{lon:58.7,lat:16.2,text:'بحر العرب',cls:'lbl-w big',rot:0},
+  oman:{lon:60.3,lat:23.9,text:'خليج عُمان',cls:'lbl-w',rot:38},
+  aden:{lon:48.3,lat:12.45,text:'خليج عدن',cls:'lbl-w big',rot:-4},
+  hormuz:{lon:56.5,lat:26.45,text:'مضيق هرمز',cls:'lbl-w',leader:true,dx:30,dy:26,anchor:'start'},
+  bab:{lon:43.35,lat:12.66,text:'مضيق باب المندب',cls:'lbl-w',leader:true,dx:20,dy:40,anchor:'start'},
+  aqaba:{lon:34.64,lat:28.5,text:'خليج العقبة',cls:'lbl-w',leader:true,dx:-8,dy:96,anchor:'end',minK:1.05},
+  suez:{lon:33.0,lat:28.6,text:'خليج السويس',cls:'lbl-w',leader:true,dx:44,dy:56,anchor:'start',minK:1.05}
+};
+WATERS.forEach(w=>{const o=WL[w.id]; if(o) addLabel(Object.assign({group:'g-w'},o));});
+/* أسماء بعض الدول المجاورة (إرشادية) */
+[['العراق',43.7,32.6],['الأردن',36.9,30.9],['إيران',54.5,32.3],['مصر',30.8,27.0],['السودان',30.5,17.5],['إريتريا',38.7,15.6],['جيبوتي',42.55,11.7],['الصومال',46.5,7.0],['إثيوبيا',39.5,9.0],['باكستان',65.5,28.5]].forEach(a=>addLabel({group:'g-c',lon:a[1],lat:a[2],text:a[0],cls:'lbl-n'}));
+
+/* مواضع الأعلام بجوار اسم الدولة (تُحسب بعد الرسم) */
+function placeFlags(){
+  labelItems.forEach(it=>{
+    if(!it.flagEl||it.flagEl.firstChild) return;
+    const bb=it.t.getBBox();
+    const w=26,h=17;
+    const inner=mk('g',{transform:'translate('+(bb.x-w-6)+','+(bb.y+bb.height/2-h/2)+')'},it.flagEl);
+    const s=mk('svg',{viewBox:'0 0 60 40',width:w,height:h,preserveAspectRatio:'none'},inner);
+    s.innerHTML=FLAGS[it.flagId];
+    mk('rect',{x:0,y:0,width:60,height:40,fill:'none',stroke:'#777','stroke-width':2},s);
+  });
+}
+
+/* ---------- العرض والتكبير والتحريك ---------- */
+let view={x:0,y:0,w:1000,h:1000}, K=1, anim=null;
+function size(){const r=wrap.getBoundingClientRect();return {W:Math.max(r.width,1),H:Math.max(r.height,1)};}
+function clampView(v){
+  const {W,H}=size(), a=W/H, ow=v.w, oh=v.h;
+  v.w=Math.min(Math.max(v.w,60),BOUNDS.w); v.h=v.w/a;
+  if(v.h>BOUNDS.h){v.h=BOUNDS.h;v.w=v.h*a;}
+  v.x+=(ow-v.w)/2; v.y+=(oh-v.h)/2;
+  v.x=Math.min(Math.max(v.x,0),Math.max(BOUNDS.w-v.w,0));
+  v.y=Math.min(Math.max(v.y,0),Math.max(BOUNDS.h-v.h,0));
+  return v;
+}
+function homeView(){
+  const {W,H}=size(), a=W/H;
+  const w0=(((a<0.9)?64.0:61.8)-34.0)*PR.k*PR.cx, h0=(34.6-9.4)*PR.k;
+  let w,h; if(a>w0/h0){h=h0;w=h*a;}else{w=w0;h=w/a;}
+  const [cx,cy]=proj(47.9,22.0);
+  return clampView({x:cx-w/2,y:cy-h/2,w:w,h:h});
+}
+function apply(){
+  clampView(view);
+  svg.setAttribute('viewBox',view.x.toFixed(2)+' '+view.y.toFixed(2)+' '+view.w.toFixed(2)+' '+view.h.toFixed(2));
+  const {W,H}=size(); K=Math.min(W/view.w,H/view.h);
+  const s=Math.min(1,Math.max(.72,W/900))/K;
+  labelItems.forEach(it=>{it.g.setAttribute('transform','translate('+it.x.toFixed(1)+','+it.y.toFixed(1)+') scale('+s.toFixed(4)+')');it.g.style.display=(it.minK&&K<it.minK)?'none':'';});
+  for(const id in markerEl){const g=markerEl[id].g;g.setAttribute('transform','translate('+g.dataset.x+','+g.dataset.y+') scale('+s.toFixed(4)+')');}
+}
+function animateTo(t,ms){
+  cancelAnimationFrame(anim);
+  const from={x:view.x,y:view.y,w:view.w,h:view.h}; t=clampView(Object.assign({},t));
+  const t0=performance.now(); ms=ms||550;
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if(reduce){view=t;apply();return;}
+  (function step(now){
+    let p=Math.min((now-t0)/ms,1); p=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+    view={x:from.x+(t.x-from.x)*p,y:from.y+(t.y-from.y)*p,w:from.w+(t.w-from.w)*p,h:from.h+(t.h-from.h)*p};
+    apply(); if(p<1) anim=requestAnimationFrame(step);
+  })(t0);
+}
+function toWorld(px,py){const r=svg.getBoundingClientRect();const {W,H}=size();return [view.x+(px-r.left-(r.width-view.w*K)/2)/K, view.y+(py-r.top-(r.height-view.h*K)/2)/K];}
+function zoomAt(f,px,py,smooth){
+  const [wx,wy]=toWorld(px,py);
+  const nw=Math.min(Math.max(view.w/f,60),BOUNDS.w), nh=nw*(view.h/view.w);
+  const r=svg.getBoundingClientRect();
+  const fx=(px-r.left)/r.width, fy=(py-r.top)/r.height;
+  const t={x:wx-fx*nw,y:wy-fy*nh,w:nw,h:nh};
+  if(smooth) animateTo(t,260); else {view=t;apply();}
+}
+function zoomCenter(f){const r=svg.getBoundingClientRect();zoomAt(f,r.left+r.width/2,r.top+r.height/2,true);}
+function fitBox(bb,pad){
+  const {W,H}=size(), a=W/H; pad=pad||1.5;
+  let w=bb.width*pad,h=bb.height*pad; if(w/h<a)w=h*a;else h=w/a;
+  animateTo({x:bb.x+bb.width/2-w/2,y:bb.y+bb.height/2-h/2,w:w,h:h});
+}
+$('#zIn').onclick=()=>zoomCenter(1.5);
+$('#zOut').onclick=()=>zoomCenter(1/1.5);
+$('#zHome').onclick=()=>animateTo(homeView());
+wrap.addEventListener('wheel',e=>{e.preventDefault();zoomAt(e.deltaY<0?1.2:1/1.2,e.clientX,e.clientY,false);},{passive:false});
+
+/* سحب وتحريك + لمس بإصبعين */
+const ptrs=new Map(); let drag=null, moved=false, pinch=null;
+svg.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse'&&e.button!==0) return;
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  moved=false;
+  if(ptrs.size===1) drag={x:e.clientX,y:e.clientY,vx:view.x,vy:view.y,id:e.pointerId,cap:false};
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),w:view.w};drag=null;}
+  cancelAnimationFrame(anim);
+});
+svg.addEventListener('pointermove',e=>{
+  if(!ptrs.has(e.pointerId)) return;
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&ptrs.size>=2){
+    const [a,b]=[...ptrs.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y);
+    zoomAt((pinch.w/view.w)*(d/pinch.d),(a.x+b.x)/2,(a.y+b.y)/2,false); pinch.d=d; pinch.w=view.w; moved=true; return;
+  }
+  if(drag&&e.pointerId===drag.id){
+    const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+    if(!drag.cap&&Math.hypot(dx,dy)>5){drag.cap=true;moved=true;try{svg.setPointerCapture(e.pointerId);}catch(_){ }svg.classList.add('dragging');hideTip();}
+    if(drag.cap){view.x=drag.vx-dx/K;view.y=drag.vy-dy/K;apply();}
+  }
+});
+function endPtr(e){ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(ptrs.size===0){drag=null;svg.classList.remove('dragging');}}
+svg.addEventListener('pointerup',endPtr);svg.addEventListener('pointercancel',endPtr);
+
+/* ---------- التفاعل مع العناصر ---------- */
+const byC={},byW={};COUNTRIES.forEach(c=>byC[c.id]=c);WATERS.forEach(w=>byW[w.id]=w);
+let selected=null; // {type,id}
+function flagAt(id,on){labelItems.forEach(it=>{if(it.cid===id&&it.flagEl)it.flagEl.classList.toggle('on',on);});}
+function showTip(html,e){
+  tip.innerHTML=html;tip.style.display='flex';
+  const r=wrap.getBoundingClientRect(); let x=e.clientX-r.left+14,y=e.clientY-r.top+14;
+  const tw=tip.offsetWidth,th=tip.offsetHeight;
+  if(x+tw>r.width-8)x=e.clientX-r.left-tw-14; if(y+th>r.height-8)y=e.clientY-r.top-th-14;
+  tip.style.left=Math.max(4,x)+'px';tip.style.top=Math.max(4,y)+'px';
+}
+function hideTip(){tip.style.display='none';}
+function tipCountry(c){return '<div class="tf">'+flagSvg(c.id)+'</div><div><b>'+c.name+'</b><span>العاصمة: '+c.capital+'</span></div>';}
+function tipWater(w){return '<div class="tf">'+flagSvg('water')+'</div><div><b>'+w.name+'</b><span>'+w.type+'</span></div>';}
+COUNTRIES.forEach(c=>{
+  const p=countryEl[c.id];
+  p.addEventListener('mouseenter',e=>{ovEl[c.id].classList.add('hover');flagAt(c.id,true);});
+  p.addEventListener('mousemove',e=>{if(!drag||!drag.cap)showTip(tipCountry(c),e);});
+  p.addEventListener('mouseleave',()=>{ovEl[c.id].classList.remove('hover');flagAt(c.id,false);hideTip();});
+  p.addEventListener('click',()=>{if(moved)return;select('c',c.id,false);});
+});
+function bindWater(el,w){
+  el.addEventListener('mouseenter',()=>{el.classList.add('hover');if(waterEl[w.id])waterEl[w.id].classList.add('hover');});
+  el.addEventListener('mousemove',e=>{if(!drag||!drag.cap)showTip(tipWater(w),e);});
+  el.addEventListener('mouseleave',()=>{el.classList.remove('hover');if(waterEl[w.id])waterEl[w.id].classList.remove('hover');hideTip();});
+  el.addEventListener('click',()=>{if(moved)return;select('w',w.id,false);});
+}
+WATERS.forEach(w=>{if(waterEl[w.id])bindWater(waterEl[w.id],w);if(markerEl[w.id])bindWater(markerEl[w.id].c,w);});
+svg.addEventListener('click',e=>{ if(moved) return; if(e.target===svg||e.target.id==='bgRect') select(null); });
+
+function select(type,id,zoom){
+  if(!type){selected=null;}
+  else selected={type:type,id:id};
+  for(const k in ovEl)ovEl[k].classList.toggle('selected',!!selected&&selected.type==='c'&&selected.id===k);
+  for(const k in waterEl)waterEl[k].classList.toggle('selected',!!selected&&selected.type==='w'&&selected.id===k);
+  for(const k in markerEl)markerEl[k].c.classList.toggle('selected',!!selected&&selected.type==='w'&&selected.id===k);
+  if(!selected){renderHome();return;}
+  if(type==='c')renderCountry(byC[id]); else renderWater(byW[id]);
+  if(zoom){
+    let el=type==='c'?countryEl[id]:(waterEl[id]||markerEl[id].c);
+    let bb=el.getBBox();
+    if(type==='w'&&markerEl[id]&&!waterEl[id]){const mx=+markerEl[id].g.dataset.x,my=+markerEl[id].g.dataset.y;bb={x:mx-60,y:my-60,width:120,height:120};}
+    if(type==='w'&&(id==='hormuz'||id==='bab')){const m=markerEl[id];const mx=+m.g.dataset.x,my=+m.g.dataset.y;bb={x:mx-90,y:my-90,width:180,height:180};}
+    fitBox(bb,type==='c'&&(id==='bh'||id==='qa'||id==='kw')?4:1.35);
+  }
+  if(matchMedia('(max-width:980px)').matches)$('#panel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ---------- لوحة المعلومات ---------- */
+const panel=$('#panel');
+const li=a=>'<div class="chips">'+a.map(x=>'<span>'+x+'</span>').join('')+'</div>';
+function renderHome(){
+  panel.innerHTML=
+   '<div class="p-head"><div class="p-flag">'+flagSvg('water')+'</div><div><h2>مرحبًا بك في الخريطة</h2><div class="sub">اختر دولة أو مسطحًا مائيًا</div></div></div>'+
+   '<div class="sec"><h3>طريقة الاستخدام</h3><ul class="how"><li>مرّر المؤشر فوق دولة لتظليلها ورؤية علمها وعاصمتها.</li><li>انقر على دولة أو مسطح مائي لعرض بطاقته هنا.</li><li>المضيقان (هرمز وباب المندب) والخليجان الصغيران يظهران بعلامة دائرية، فانقر عليها.</li><li>ابحث بالاسم من الأعلى أو افتح «قائمة العناصر».</li></ul></div>'+
+   '<div class="sec"><h3>دليل الألوان</h3><div class="legend"><div><i style="background:#efe4c3"></i>دول شبه الجزيرة السبع</div><div><i style="background:#dedbd0"></i>دول مجاورة (للتوضيح فقط)</div><div><i style="background:#9fcbe6"></i>مسطحات مائية (تُحدَّد مستقلة عن الدول)</div><div><i style="background:rgba(214,164,26,.7)"></i>عند التمرير</div><div><i style="background:rgba(46,125,50,.55)"></i>الدولة المحددة</div></div></div>'+
+   '<div class="p-actions"><button class="btn alt" type="button" id="pCmp">جدول المقارنة</button><button class="btn alt" type="button" id="pList">قائمة العناصر</button></div>';
+  $('#pCmp').onclick=openCompare;$('#pList').onclick=openList;
+}
+function row(k,v){return v?'<dt>'+k+'</dt><dd>'+v+'</dd>':'';}
+function renderCountry(c){
+  panel.innerHTML=
+  '<div class="p-head"><div class="p-flag">'+flagSvg(c.id)+'</div><div><h2>'+c.official+'</h2><div class="sub">العاصمة: '+c.capital+'</div></div></div>'+
+  '<div class="sec"><h3>بيانات أساسية</h3><dl class="kv">'+
+   row('الاسم الرسمي',c.official)+row('العاصمة',c.capital+(c.capitalNote?' <small>('+c.capitalNote+')</small>':''))+
+   row('عدد السكان',c.pop.value+' <small>('+c.pop.kind+'، '+c.pop.year+')</small>')+
+   row('المساحة',c.area+' كم² <small>(تقريبية)</small>')+
+   row('الحاكم الحالي',c.ruler.name+'<br><small>'+c.ruler.title+'</small>')+
+   row('نظام الحكم',c.government)+row('العملة الرسمية',c.currency)+row('اللغة الرسمية',c.language)+
+  '</dl></div>'+
+  '<div class="sec"><h3>الموقع الجغرافي</h3><p style="margin:4px 0">'+c.location+'</p></div>'+
+  '<div class="sec"><h3>نبذة تعريفية</h3><p style="margin:4px 0">'+c.about+'</p></div>'+
+  '<div class="sec"><h3>أبرز المدن</h3>'+li(c.cities)+'</div>'+
+  '<div class="sec"><h3>أبرز المعالم الجغرافية</h3>'+li(c.features)+'</div>'+
+  (c.note?'<div class="note">'+c.note+'</div>':'')+
+  '<div class="note">مصدر السكان: '+c.pop.source+'</div>'+
+  '<div class="p-actions"><button class="btn" type="button" id="pHome">العودة إلى العرض الابتدائي</button></div>';
+  $('#pHome').onclick=goHome;
+}
+function renderWater(w){
+  panel.innerHTML=
+  '<div class="p-head"><div class="p-flag">'+flagSvg('water')+'</div><div><h2>'+w.name+'</h2><div class="sub">'+w.type+(w.kind==='strait'?' — ممر مائي ضيق':(w.kind==='open'?' — مسطح مائي مفتوح':''))+'</div></div></div>'+
+  '<div class="sec"><h3>بيانات أساسية</h3><dl class="kv">'+
+   row('الاسم الجغرافي',w.official)+row('نوع المسطح',w.type)+row('الموقع الجغرافي',w.location)+'</dl></div>'+
+  '<div class="sec"><h3>الدول المطلة عليه</h3>'+li(w.countries)+'</div>'+
+  '<div class="sec"><h3>المسطحات المتصلة به</h3>'+li(w.connects)+'</div>'+
+  '<div class="sec"><h3>الامتداد الجغرافي</h3><p style="margin:4px 0">'+w.extent+'</p></div>'+
+  '<div class="sec"><h3>الأهمية الملاحية والتجارية</h3><p style="margin:4px 0">'+w.importance+'</p></div>'+
+  (w.extra&&w.extra.length?'<div class="sec"><h3>معلومات أخرى</h3><ul style="margin:4px 0;padding-right:20px">'+w.extra.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>':'')+
+  '<div class="note">لم تُدرج أطوال أو مساحات أو أعماق لأن الأرقام الموثوقة لم تُثبَّت ضمن مصادر هذا الملف.</div>'+
+  '<div class="p-actions"><button class="btn" type="button" id="pHome">العودة إلى العرض الابتدائي</button></div>';
+  $('#pHome').onclick=goHome;
+}
+function goHome(){select(null);animateTo(homeView());}
+
+/* ---------- الطبقات ---------- */
+function bindToggle(id,cls){$(id).addEventListener('change',e=>svg.classList.toggle(cls,!e.target.checked));}
+bindToggle('#tC','hide-c');bindToggle('#tCap','hide-cap');bindToggle('#tW','hide-w');
+$('#bReset').onclick=goHome;
+
+/* ---------- البحث ---------- */
+const norm=s=>(s||'').replace(/[ً-ْـ]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ').trim().toLowerCase();
+const ITEMS=[].concat(
+  COUNTRIES.map(c=>({type:'c',id:c.id,label:c.name,sub:'دولة — العاصمة: '+c.capital,keys:[c.name,c.official,c.capital,c.capitalNote||''].concat(c.aliases||[])})),
+  WATERS.map(w=>({type:'w',id:w.id,label:w.name,sub:w.type,keys:[w.name,w.official].concat(w.aliases||[])}))
+);
+const q=$('#q'),sug=$('#sug'); let act=-1,cur=[];
+function renderSug(){
+  const v=norm(q.value);
+  cur=v?ITEMS.filter(it=>it.keys.some(k=>norm(k).includes(v))):[];
+  if(!cur.length){sug.classList.remove('open');sug.innerHTML=v?'':'';if(v){sug.innerHTML='<button type="button" disabled>لا توجد نتائج مطابقة</button>';sug.classList.add('open');}return;}
+  sug.innerHTML=cur.map((it,i)=>'<button type="button" data-i="'+i+'"><span>'+it.label+'</span><small>'+it.sub+'</small></button>').join('');
+  sug.classList.add('open');act=-1;
+}
+function pick(i){const it=cur[i];if(!it)return;q.value='';sug.classList.remove('open');select(it.type,it.id,true);}
+q.addEventListener('input',renderSug);
+q.addEventListener('keydown',e=>{
+  const bs=[...sug.querySelectorAll('button[data-i]')];
+  if(e.key==='ArrowDown'){e.preventDefault();act=Math.min(act+1,bs.length-1);}
+  else if(e.key==='ArrowUp'){e.preventDefault();act=Math.max(act-1,0);}
+  else if(e.key==='Enter'){e.preventDefault();pick(act>=0?act:0);return;}
+  else if(e.key==='Escape'){sug.classList.remove('open');return;}
+  bs.forEach((b,i)=>b.classList.toggle('active',i===act));
+});
+sug.addEventListener('click',e=>{const b=e.target.closest('button[data-i]');if(b)pick(+b.dataset.i);});
+document.addEventListener('click',e=>{if(!e.target.closest('.search'))sug.classList.remove('open');});
+
+/* ---------- المقارنة والقائمة ---------- */
+function openModal(id){$(id).classList.add('open');}
+document.querySelectorAll('.modal').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m||e.target.hasAttribute('data-close'))m.classList.remove('open');});});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open'));});
+function openCompare(){
+  const cols=[['الدولة',c=>c.name],['العاصمة',c=>c.capital],['السكان',c=>c.pop.value+'<br><small>'+c.pop.kind+'، '+c.pop.year+'</small>'],['المساحة (كم²)',c=>c.area],['الحاكم',c=>c.ruler.name+'<br><small>'+c.ruler.title+'</small>'],['نظام الحكم',c=>c.government],['العملة',c=>c.currency],['اللغة الرسمية',c=>c.language]];
+  $('#cmpBody').innerHTML='<table class="cmp"><thead><tr>'+cols.map(c=>'<th>'+c[0]+'</th>').join('')+'</tr></thead><tbody>'+COUNTRIES.map(c=>'<tr>'+cols.map(k=>'<td>'+k[1](c)+'</td>').join('')+'</tr>').join('')+'</tbody></table><p class="note">السنوات والمصادر مبيّنة في كل خلية وفي قسم المصادر أسفل الصفحة؛ الأرقام تقديرات وليست كلها إحصاءات تعداد.</p>';
+  openModal('#mCompare');
+}
+function openList(){
+  const cs=COUNTRIES.map(c=>'<button type="button" data-t="c" data-id="'+c.id+'"><span class="mf">'+flagSvg(c.id)+'</span><span>'+c.name+'</span></button>').join('');
+  const ws=WATERS.map(w=>'<button type="button" data-t="w" data-id="'+w.id+'"><span class="mf">'+flagSvg('water')+'</span><span>'+w.name+' <small>('+w.type+')</small></span></button>').join('');
+  $('#listBody').innerHTML='<div><h3>الدول</h3>'+cs+'</div><div><h3>المسطحات المائية</h3>'+ws+'</div>';
+  openModal('#mList');
+}
+$('#listBody').addEventListener('click',e=>{const b=e.target.closest('button[data-id]');if(!b)return;$('#mList').classList.remove('open');select(b.dataset.t,b.dataset.id,true);});
+$('#bCompare').onclick=openCompare;$('#bList').onclick=openList;
+
+/* ---------- المصادر ---------- */
+$('#sources').innerHTML='<h3>المصادر وآخر تحديث للبيانات</h3><ul>'+META.sources.map(s=>'<li>'+s+'</li>').join('')+'</ul><p><b>آخر تحديث للبيانات:</b> '+META.updated+'. '+META.disclaimer+'</p>';
+
+/* ---------- التشغيل ---------- */
+view=homeView();apply();placeFlags();renderHome();
+let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{const c={x:view.x+view.w/2,y:view.y+view.h/2};const {W,H}=size();view.h=view.w*H/W;view.x=c.x-view.w/2;view.y=c.y-view.h/2;apply();},80);});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{document.querySelectorAll('.lflag').forEach(f=>f.innerHTML='');placeFlags();});
+window.__map={select:select,view:()=>view,K:()=>K};
+})();
+</script>
+</body>
+</html>
